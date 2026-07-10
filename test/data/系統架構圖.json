@@ -1,0 +1,102 @@
+{
+  "dir": "TB",
+  "nodes": [
+    {
+      "id": "FE",
+      "label": "前端層",
+      "cls": "blueG"
+    },
+    {
+      "id": "IF",
+      "label": "前後端介面層",
+      "cls": "greenG"
+    },
+    {
+      "id": "BE",
+      "label": "後端層",
+      "cls": "orangeG"
+    },
+    {
+      "id": "fe1",
+      "label": "Vue 應用服務",
+      "cls": "blue",
+      "group": "FE"
+    },
+    {
+      "id": "fe2",
+      "title": "前端共用",
+      "items": [
+        "通用組件",
+        "資料驅動框架",
+        "狀態管理 Vuex"
+      ],
+      "cls": "blue",
+      "group": "FE"
+    },
+    {
+      "id": "if1",
+      "label": "單一登入 SSO",
+      "cls": "green",
+      "group": "IF"
+    },
+    {
+      "id": "if2",
+      "label": "權限管控",
+      "cls": "green",
+      "group": "IF"
+    },
+    {
+      "id": "if3",
+      "label": "API 管理",
+      "cls": "green",
+      "group": "IF"
+    },
+    {
+      "id": "be1",
+      "label": "Hapi 應用服務",
+      "cls": "orange",
+      "group": "BE"
+    },
+    {
+      "id": "be2",
+      "title": "中間服務",
+      "items": [
+        "佇列",
+        "消息通知",
+        "事件紀錄"
+      ],
+      "cls": "orange",
+      "group": "BE"
+    },
+    {
+      "id": "be3",
+      "title": "基礎服務",
+      "items": [
+        "檔案儲存 File Server",
+        "圖資／靜態資源"
+      ],
+      "cls": "orange",
+      "group": "BE"
+    },
+    {
+      "id": "be4",
+      "title": "資料庫",
+      "items": [
+        "LMDB",
+        "可切換 SQL Server 等"
+      ],
+      "cls": "orange",
+      "group": "BE"
+    }
+  ],
+  "edges": [
+    {
+      "from": "FE",
+      "to": "IF"
+    },
+    {
+      "from": "IF",
+      "to": "BE"
+    }
+  ]
+}

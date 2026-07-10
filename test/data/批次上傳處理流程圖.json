@@ -1,0 +1,251 @@
+{
+  "dir": "TB",
+  "nodes": [
+    {
+      "id": "IN",
+      "title": "batchUploadCntrRun",
+      "items": [
+        "mode",
+        "fdName"
+      ],
+      "cls": "blue"
+    },
+    {
+      "id": "CTRL",
+      "title": "Controller",
+      "items": [
+        "串列佇列"
+      ],
+      "cls": "blue"
+    },
+    {
+      "id": "WK",
+      "title": "Worker Thread",
+      "items": [
+        "獨立執行"
+      ],
+      "cls": "blue"
+    },
+    {
+      "id": "CORE",
+      "label": "core 流程",
+      "cls": "orangeG"
+    },
+    {
+      "id": "DET",
+      "label": "格式偵測（kpFun 依欄位路由）",
+      "cls": "greenG2",
+      "group": "CORE"
+    },
+    {
+      "id": "c1",
+      "title": "readSys",
+      "items": [
+        "讀現有全表 kpOld"
+      ],
+      "cls": "green",
+      "group": "CORE"
+    },
+    {
+      "id": "c2",
+      "title": "readXlsx",
+      "items": [
+        "解析＋keyTable 識別"
+      ],
+      "cls": "green",
+      "group": "CORE"
+    },
+    {
+      "id": "d1",
+      "label": "kpSetFiles",
+      "cls": "green",
+      "group": "DET"
+    },
+    {
+      "id": "d2",
+      "label": "kpSetParams",
+      "cls": "green",
+      "group": "DET"
+    },
+    {
+      "id": "d3",
+      "label": "kpCheckProjects",
+      "cls": "green",
+      "group": "DET"
+    },
+    {
+      "id": "d4",
+      "label": "kpCheckMds",
+      "cls": "green",
+      "group": "DET"
+    },
+    {
+      "id": "d5",
+      "label": "kpCheckTabs",
+      "cls": "green",
+      "group": "DET"
+    },
+    {
+      "id": "d6",
+      "label": "kpCheckHashs",
+      "cls": "green",
+      "group": "DET"
+    },
+    {
+      "id": "d7",
+      "label": "kpCheckRelation",
+      "cls": "green",
+      "group": "DET"
+    },
+    {
+      "id": "d8",
+      "label": "kpCheckValue",
+      "cls": "green",
+      "group": "DET"
+    },
+    {
+      "id": "c3",
+      "title": "generateReport",
+      "items": [
+        "HTML 檢測報告"
+      ],
+      "cls": "green",
+      "group": "CORE"
+    },
+    {
+      "id": "c4",
+      "title": "save",
+      "items": [
+        "以預產 id 直接 insert"
+      ],
+      "cls": "green",
+      "group": "CORE"
+    },
+    {
+      "id": "Q",
+      "label": "進度查詢 batchUploadCntrGet(id)",
+      "cls": "done"
+    },
+    {
+      "id": "ST",
+      "label": "狀態",
+      "cls": "diamond"
+    },
+    {
+      "id": "w",
+      "title": "等待中",
+      "items": [
+        "waiting"
+      ],
+      "cls": "done"
+    },
+    {
+      "id": "do",
+      "title": "執行中",
+      "items": [
+        "doing"
+      ],
+      "cls": "done"
+    },
+    {
+      "id": "su",
+      "title": "完成",
+      "items": [
+        "success"
+      ],
+      "cls": "done"
+    },
+    {
+      "id": "er",
+      "title": "錯誤",
+      "items": [
+        "error"
+      ],
+      "cls": "done"
+    }
+  ],
+  "edges": [
+    {
+      "from": "IN",
+      "to": "CTRL"
+    },
+    {
+      "from": "CTRL",
+      "to": "WK"
+    },
+    {
+      "from": "WK",
+      "to": "c1"
+    },
+    {
+      "from": "c1",
+      "to": "c2"
+    },
+    {
+      "from": "c2",
+      "to": "d1"
+    },
+    {
+      "from": "d1",
+      "to": "d2"
+    },
+    {
+      "from": "d2",
+      "to": "d3"
+    },
+    {
+      "from": "d3",
+      "to": "d4"
+    },
+    {
+      "from": "d4",
+      "to": "d5"
+    },
+    {
+      "from": "d5",
+      "to": "d6"
+    },
+    {
+      "from": "d6",
+      "to": "d7"
+    },
+    {
+      "from": "d7",
+      "to": "d8"
+    },
+    {
+      "from": "d8",
+      "to": "c3"
+    },
+    {
+      "from": "c3",
+      "to": "c4"
+    },
+    {
+      "from": "WK",
+      "to": "Q",
+      "label": "進度回報",
+      "kind": "dashed"
+    },
+    {
+      "from": "Q",
+      "to": "ST"
+    },
+    {
+      "from": "ST",
+      "to": "w"
+    },
+    {
+      "from": "ST",
+      "to": "do"
+    },
+    {
+      "from": "ST",
+      "to": "su"
+    },
+    {
+      "from": "ST",
+      "to": "er"
+    }
+  ]
+}

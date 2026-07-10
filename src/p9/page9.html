@@ -1,0 +1,420 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<!-- 繪圖庫由本機 node_modules 內聯注入(gen.mjs 讀本檔後替換各佔位符; 取代 esm.sh/CDN, 斷網環境可用) -->
+<style>/*__XYFLOW_CSS__*/</style>
+<style>
+  html,body{margin:0;background:#fff;font-family:'Microsoft JhengHei',sans-serif}
+  /* 字型設定層兜底: 強制整個 React Flow 渲染樹(節點/容器標題/粗體/邊標籤)全繼承 JhengHei,
+     即使未來新增文字元素未逐處指定 fontFamily 也被全覆蓋(原則1: 從設定層做到完整覆蓋) */
+  .react-flow, .react-flow__node, .react-flow__edge-text, .react-flow__edgelabel-renderer{font-family:'Microsoft JhengHei',sans-serif!important}
+  .react-flow__attribution{display:none!important}
+  #stage{background:#fff}
+  /* 量測用隱形容器 */
+  #meas{position:absolute;left:-99999px;top:0;font-family:'Microsoft JhengHei',sans-serif;visibility:hidden}
+</style>
+</head><body>
+<div id="shot" style="display:inline-block;background:#fff;padding:24px">
+  <div id="stage" style="width:1200px;height:900px"></div>
+</div>
+<div id="meas"></div>
+<script>/*__REACT_JS__*/</script>
+<script>/*__REACT_DOM_JS__*/</script>
+<script>
+// react/jsx-runtime shim: @xyflow/react UMD 之外部依賴含全域 jsxRuntime(react 18 UMD 未提供),
+// 以 createElement 等價實作 jsx/jsxs(children 由 props 抽出改為位置參數, key 併回 props)
+window.jsxRuntime = (function(){
+  var R = window.React
+  function jsxShim(type, props, key){
+    props = props || {}
+    var children = props.children
+    var rest = {}
+    for (var k in props) if (k !== 'children') rest[k] = props[k]
+    if (key !== undefined) rest.key = key
+    if (children === undefined) return R.createElement(type, rest)
+    return Array.isArray(children) ? R.createElement.apply(null, [type, rest].concat(children)) : R.createElement(type, rest, children)
+  }
+  return { jsx: jsxShim, jsxs: jsxShim, Fragment: R.Fragment }
+})()
+</script>
+<script>/*__XYFLOW_JS__*/</script>
+<script>/*__DAGRE_JS__*/</script>
+<script type="module">
+try {
+  const React = window.React
+  const { createRoot } = window.ReactDOM
+  const RF = window.ReactFlow
+  const dagre = window.dagre
+  const ReactFlow = RF.ReactFlow || RF.default
+  const h = React.createElement
+
+  // ---- 色票(沿用 cytoscape 版配色) ----
+  const COL = {
+    blue:   ['#eef4fb','#3f6fb0','#1c2b36'],
+    green:  ['#eaf4ef','#348a5c','#1c2b36'],
+    orange: ['#fcf0e2','#c46e1a','#1c2b36'],
+    purple: ['#f4f0fa','#8163ad','#1c2b36'],
+    red:    ['#fbecea','#c0392b','#1c2b36'],
+    done:   ['#eaf4ef','#256046','#256046'],
+    // 群組(淡底+粗框, 文字用框色)
+    blueG:   ['#f5f9fe','#3f6fb0','#3f6fb0'],
+    blueG2:  ['#eef4fb','#3f6fb0','#3f6fb0'],
+    greenG:  ['#f0f7f3','#348a5c','#348a5c'],
+    greenG2: ['#eaf4ef','#348a5c','#348a5c'],
+    orangeG: ['#fdf6ec','#c46e1a','#c46e1a'],
+    purpleG: ['#faf7fd','#8163ad','#8163ad'],
+  }
+
+  // ---- 量測一段多行文字實際像素(避免爆框) ----
+  const meas = document.getElementById('meas')
+  function measure(label, fontSize, padX, padY, maxW) {
+    const d = document.createElement('div')
+    d.style.cssText = `display:inline-block;white-space:pre-line;overflow-wrap:break-word;word-break:normal;text-align:center;line-height:1.45;`
+      + `font-size:${fontSize}px;padding:${padY}px ${padX}px;max-width:${maxW}px;box-sizing:border-box;`
+    d.textContent = label
+    meas.appendChild(d)
+    const r = d.getBoundingClientRect()
+    meas.removeChild(d)
+    return { w: Math.ceil(r.width) + 2, h: Math.ceil(r.height) + 2 }
+  }
+
+  // ---- 單一 div 多行 label (whiteSpace:pre-line 置中) ----
+  const Label = (text, fontSize, color) => h('div', {
+    style: { whiteSpace: 'pre-line', overflowWrap: 'break-word', wordBreak: 'normal', textAlign: 'center', lineHeight: 1.45, fontSize, color,
+             width: '100%', fontFamily: 'Microsoft JhengHei,sans-serif' }
+  }, text)
+
+  // ---- 自訂菱形節點 ----
+  const Pos = RF.Position
+  function DiamondNode({ data }) {
+    const s = data._sz
+    return h('div', { style: { width: s.w, height: s.h, position: 'relative' } }, [
+      h('div', { key: 'd', style: {
+        position: 'absolute', inset: 0, background: COL.orange[0],
+        border: '1.8px solid ' + COL.orange[1], transform: 'rotate(45deg)', borderRadius: 4 } }),
+      h('div', { key: 't', style: {
+        position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' } },
+        Label(data.label, data.fontSize || 14, COL.orange[2])),
+      ...[['t', Pos.Top], ['b', Pos.Bottom], ['l', Pos.Left], ['r', Pos.Right]].flatMap(([id, pos]) => [
+        h(RF.Handle, { key: 's' + id, id: 's' + id, type: 'source', position: pos, style: { opacity: 0, pointerEvents: 'none' } }),
+        h(RF.Handle, { key: 't' + id, id: 't' + id, type: 'target', position: pos, style: { opacity: 0, pointerEvents: 'none' } }),
+      ]),
+    ])
+  }
+  // ---- 顯式佈局用節點: 四邊各一組 source+target handle, 供任意方向連邊 ----
+  function BoxNode({ data }) {
+    const s = data._sz, c = COL[data.kind] || COL.blue
+    const sides = [['t', Pos.Top], ['b', Pos.Bottom], ['l', Pos.Left], ['r', Pos.Right]]
+    const hs = []
+    for (const [id, pos] of sides) {
+      hs.push(h(RF.Handle, { key: 's' + id, id: 's' + id, type: 'source', position: pos, style: { opacity: 0, pointerEvents: 'none' } }))
+      hs.push(h(RF.Handle, { key: 't' + id, id: 't' + id, type: 'target', position: pos, style: { opacity: 0, pointerEvents: 'none' } }))
+    }
+    return h('div', { style: {
+      width: s.w, height: s.h, background: c[0], border: '1.8px solid ' + c[1], borderRadius: 8,
+      color: c[2], display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box',
+      fontFamily: 'Microsoft JhengHei,sans-serif' } }, [Label(data.label, data.fontSize || 14, c[2]), ...hs])
+  }
+  // ---- 群組容器(含四邊 handle, 供層級邊連接) ----
+  function GroupNode({ data }) {
+    const c = COL[data.kind] || COL.blueG, s = data._sz
+    const sides = [['t', Pos.Top], ['b', Pos.Bottom], ['l', Pos.Left], ['r', Pos.Right]]
+    const hs = []
+    for (const [id, pos] of sides) {
+      hs.push(h(RF.Handle, { key: 's' + id, id: 's' + id, type: 'source', position: pos, style: { opacity: 0, pointerEvents: 'none' } }))
+      hs.push(h(RF.Handle, { key: 't' + id, id: 't' + id, type: 'target', position: pos, style: { opacity: 0, pointerEvents: 'none' } }))
+    }
+    return h('div', { style: {
+      width: s.w, height: s.h, background: c[0], border: '2px solid ' + c[1], borderRadius: 10,
+      boxSizing: 'border-box', position: 'relative' } }, [
+      h('div', { key: 'ttl', style: {
+        position: 'absolute', top: 6, left: 0, width: '100%', textAlign: 'center',
+        fontWeight: 'bold', fontSize: (data.titleSize || 15), color: c[1],
+        fontFamily: 'Microsoft JhengHei,sans-serif' } }, data.label),
+      ...hs,
+    ])
+  }
+  const nodeTypes = { diamond: DiamondNode, box: BoxNode, grp: GroupNode }
+
+  // ---- 通用節點樣式 ----
+  function nodeStyle(kind, w, hgt, isGroup) {
+    const c = COL[kind] || COL.blue
+    return {
+      width: w, height: hgt, background: c[0], border: (isGroup ? '2px' : '1.8px') + ' solid ' + c[1],
+      borderRadius: 8, color: c[2], display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxSizing: 'border-box', fontFamily: 'Microsoft JhengHei,sans-serif',
+    }
+  }
+
+  // 群組標題(置頂)樣式: 用節點 label 區塊撐開, 子節點顯式定位避開標題列
+  function groupNode(spec) {
+    const c = COL[spec.kind] || COL.blueG
+    return {
+      id: spec.id, type: 'group', position: { x: spec.x, y: spec.y },
+      data: {},
+      style: { width: spec.w, height: spec.h, background: c[0], border: '2px solid ' + c[1],
+               borderRadius: 10, boxSizing: 'border-box' },
+      draggable: false, selectable: false,
+    }
+  }
+  function groupTitle(spec) {
+    // 群組標題以一個獨立子節點(無框)放在群組頂部置中
+    const c = COL[spec.kind] || COL.blueG
+    return {
+      id: spec.id + '__title', parentId: spec.id, extent: 'parent',
+      position: { x: 0, y: 6 },
+      data: { label: Label(spec.label, spec.titleSize || 15, c[1]) },
+      style: { width: spec.w, height: 24, background: 'transparent', border: 'none',
+               display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' },
+      draggable: false, selectable: false,
+    }
+  }
+
+  // ---- 通用節點尺寸量測(資料驅動共用): 依 label 字數/行數自動算寬高 ----
+  //   矩形 padding 18/12; 菱形取對角線方框; 無逐圖魔術數字。
+  function sizeOf(n) {
+    const fs = n.fontSize || 14
+    if (n.kind === 'diamond') { const s = measure(n.label, fs, 4, 4, 160); const d = Math.max(s.w, s.h) + 56; return { w: d, h: d } }
+    return measure(n.label, fs, 18, 12, 320)
+  }
+
+  // ---- 資料驅動 compound dagre 佈局(群組以 dagre 原生 setParent 自動排版) ----
+  //   spec.nodes: [{id,label,kind,parent?}] (parent=容器 id, 容器本身也是一個 node, kind 結尾 G/G2)
+  //   群組容器尺寸/位置由 dagre cluster 自動推算; 子節點絕對定位; 容器頂部保留標題列高度。
+  function layoutDagreCompound(spec) {
+    const { rankDir = 'TB', nodes: rawNodes, edges: rawEdges } = spec
+    const isGrp = n => /G2?$/.test(n.kind || '')
+    const grpIds = new Set(rawNodes.filter(isGrp).map(n => n.id))
+    // 群組標題列高度: 依標題字級通用推算(字級 + 上下留白)
+    const titleBand = n => Math.round((n.fontSize || 15) * 1.4) + 12
+
+    const g = new dagre.graphlib.Graph({ compound: true })
+    g.setGraph({ rankdir: rankDir, nodesep: spec.nodesep || 46, ranksep: spec.ranksep || 62, marginx: 12, marginy: 12 })
+    g.setDefaultEdgeLabel(() => ({}))
+
+    const sized = {}
+    // 先放葉節點(非群組)
+    for (const n of rawNodes) {
+      if (grpIds.has(n.id)) continue
+      const s = sizeOf(n)
+      sized[n.id] = s
+      g.setNode(n.id, { width: s.w, height: s.h })
+    }
+    // 放群組容器(dagre compound: 容器尺寸由其子節點自動撐開, 標題列高度於佈局後再向上擴張)
+    for (const n of rawNodes) {
+      if (!grpIds.has(n.id)) continue
+      g.setNode(n.id, {})
+    }
+    // 建立歸屬(子→容器), 支援巢狀(容器亦可有 parent)
+    for (const n of rawNodes) {
+      if (n.parent && grpIds.has(n.parent)) g.setParent(n.id, n.parent)
+    }
+    // dagre compound 不能對「容器節點」直接連邊(ranking 階段會崩),
+    //   故 ranking 用「代表葉節點」替代容器端點(取該容器第一個葉子後代);
+    //   實際繪線仍用容器框(後段 pickHandles 以絕對 box 計算)。此為通用處理, 非逐圖。
+    const repLeaf = {}
+    for (const n of rawNodes) {
+      if (n.parent && grpIds.has(n.parent) && !grpIds.has(n.id) && repLeaf[n.parent] === undefined) repLeaf[n.parent] = n.id
+    }
+    const rankId = id => grpIds.has(id) ? (repLeaf[id] || id) : id
+    const seenRank = new Set()
+    for (const e of rawEdges) {
+      const s = rankId(e.s), t = rankId(e.t)
+      if (s === t) continue
+      const key = s + '' + t
+      if (seenRank.has(key)) continue
+      seenRank.add(key)
+      g.setEdge(s, t)
+    }
+    dagre.layout(g)
+
+    // dagre 給出每個節點/群組之中心 + 尺寸, 全部以絕對座標放置(群組先放→在底層)
+    //   群組框向上擴張一個「標題列」高度, 讓置頂標題不壓到第一列子節點(通用, 依字級推算)。
+    const nodes = []
+    for (const n of rawNodes) {
+      if (!grpIds.has(n.id)) continue
+      const p = g.node(n.id)
+      const band = titleBand(n)
+      const w = p.width, hh = p.height + band
+      const x = p.x - w / 2, y = (p.y - p.height / 2) - band
+      nodes.push({
+        id: n.id, type: 'grp', position: { x, y },
+        data: { label: n.label, kind: n.kind, titleSize: n.fontSize || 15, _sz: { w, h: hh } },
+        zIndex: 0,                              // z-order 最底層: 容器填色墊底, 不遮節點/邊/標籤(原則2)
+        draggable: false, selectable: false,
+      })
+    }
+    for (const n of rawNodes) {
+      if (grpIds.has(n.id)) continue
+      const p = g.node(n.id), s = sized[n.id], fs = n.fontSize || 14
+      const c = COL[n.kind] || COL.blue
+      const base = { id: n.id, position: { x: p.x - s.w / 2, y: p.y - s.h / 2 }, zIndex: 1, draggable: false, selectable: false }
+      if (n.kind === 'diamond') {
+        nodes.push({ ...base, type: 'diamond', data: { label: n.label, fontSize: fs, _sz: s } })
+      } else {
+        nodes.push({ ...base, type: 'box', data: { label: n.label, fontSize: fs, kind: n.kind, _sz: s } })
+      }
+    }
+    // 邊: 依絕對幾何自動挑 handle(同 explicit 路徑), 虛線/標籤沿用 mkEdge
+    const box = {}
+    for (const n of nodes) box[n.id] = { x: n.position.x, y: n.position.y, w: n.data._sz.w, h: n.data._sz.h }
+    const edges = rawEdges.map((e, i) => {
+      const a = box[e.s], b = box[e.t]
+      if (!a || !b) return mkEdge(e, i, null, null, 'default')
+      const { sh, th } = pickHandles(a, b)
+      return mkEdge(e, i, sh, th, 'default')
+    })
+    // 回傳含畫布實際尺寸(供 stage 自動設定, 無逐圖 W/H)
+    const gg = g.graph()
+    return { nodes, edges, W: Math.ceil(gg.width) + 48, H: Math.ceil(gg.height) + 48 }
+  }
+
+  // ---- dagre 佈局(流程/關係圖) ----
+  function layoutDagre(spec) {
+    const { rankDir = 'TB', nodes: rawNodes, edges: rawEdges } = spec
+    const g = new dagre.graphlib.Graph()
+    g.setGraph({ rankdir: rankDir, nodesep: spec.nodesep || 46, ranksep: spec.ranksep || 62, marginx: 10, marginy: 10 })
+    g.setDefaultEdgeLabel(() => ({}))
+    const sized = {}
+    for (const n of rawNodes) {
+      const fs = n.fontSize || 14
+      const maxW = n.maxW || (n.kind === 'diamond' ? 160 : 300)
+      let s = measure(n.label, fs, n.kind === 'diamond' ? 4 : 18, n.kind === 'diamond' ? 4 : 12, maxW)
+      if (n.kind === 'diamond') { const d = Math.max(s.w, s.h) + 56; s = { w: d, h: d } }
+      sized[n.id] = s
+      g.setNode(n.id, { width: s.w, height: s.h })
+    }
+    for (const e of rawEdges) g.setEdge(e.s, e.t)
+    dagre.layout(g)
+
+    const nodes = rawNodes.map(n => {
+      const p = g.node(n.id), s = sized[n.id], fs = n.fontSize || 14
+      const c = COL[n.kind] || COL.blue
+      if (n.kind === 'diamond') {
+        return { id: n.id, type: 'diamond', position: { x: p.x - s.w / 2, y: p.y - s.h / 2 },
+                 data: { label: n.label, fontSize: fs, _sz: s }, draggable: false, selectable: false }
+      }
+      return {
+        id: n.id, position: { x: p.x - s.w / 2, y: p.y - s.h / 2 },
+        data: { label: Label(n.label, fs, c[2]) }, style: nodeStyle(n.kind, s.w, s.h),
+        sourcePosition: rankDir === 'LR' ? 'right' : 'bottom',
+        targetPosition: rankDir === 'LR' ? 'left' : 'top',
+        draggable: false, selectable: false,
+      }
+    })
+    const edges = rawEdges.map((e, i) => mkEdge(e, i))
+    return { nodes, edges }
+  }
+
+  // ---- 邊 ----
+  function mkEdge(e, i, sh, th, etype) {
+    const dash = e.dashed
+    const col = dash ? '#c46e1a' : '#44505a'
+    return {
+      id: 'e' + i, source: e.s, target: e.t,
+      sourceHandle: sh || e.sh, targetHandle: th || e.th,
+      zIndex: 2,                                // z-order 最上層: 設 edge.zIndex 後 React Flow 以獨立 wrapper 渲染, 邊與邊標籤皆浮於容器/節點之上, 標籤不被容器填色遮(原則2)
+      label: e.l || '', type: etype || e.type || 'default',
+      pathOptions: (etype === 'smoothstep' || e.type === 'smoothstep') ? { borderRadius: 10 } : undefined,
+      style: { stroke: col, strokeWidth: 2, strokeDasharray: dash ? '6 4' : undefined },
+      labelStyle: { fontFamily: 'Microsoft JhengHei,sans-serif', fontSize: 12.5, fill: '#3a444d',
+                    stroke: '#ffffff', strokeWidth: 3.5, paintOrder: 'stroke' },
+      labelBgStyle: { fill: 'transparent', fillOpacity: 0 },
+      labelBgPadding: [0, 0], labelBgBorderRadius: 0,
+      markerEnd: { type: 'arrowclosed', color: col, width: 18, height: 18 },
+    }
+  }
+
+  // 依兩節點絕對 box 幾何, 自動挑選 source/target 邊上的 handle
+  function pickHandles(a, b) {
+    const acx = a.x + a.w / 2, acy = a.y + a.h / 2
+    const bcx = b.x + b.w / 2, bcy = b.y + b.h / 2
+    const dx = bcx - acx, dy = bcy - acy
+    let sSide, tSide
+    if (Math.abs(dx) >= Math.abs(dy)) { sSide = dx >= 0 ? 'r' : 'l'; tSide = dx >= 0 ? 'l' : 'r' }
+    else { sSide = dy >= 0 ? 'b' : 't'; tSide = dy >= 0 ? 't' : 'b' }
+    return { sh: 's' + sSide, th: 't' + tSide }
+  }
+
+  // ---- 顯式佈局(群組/分層/巢狀圖) ----
+  // spec.groups: [{id,label,kind,x,y,w,h,titleSize}]
+  // spec.nodes:  [{id,label,kind,parent,x,y,w,h,fontSize}]  (x,y 為相對 parent; 無 parent 則為絕對)
+  function layoutExplicit(spec) {
+    const nodes = []
+    // 絕對 box 表(供 pickHandles 計算), 含群組容器自身
+    const box = {}
+    const grpById = {}
+    for (const grp of (spec.groups || [])) {
+      grpById[grp.id] = grp
+    }
+    for (const grp of (spec.groups || [])) {
+      // 解析群組絕對座標(支援巢狀群組)
+      let gx = grp.x, gy = grp.y, gp = grp.parent
+      while (gp && grpById[gp]) { gx += grpById[gp].x; gy += grpById[gp].y; gp = grpById[gp].parent }
+      box[grp.id] = { x: gx, y: gy, w: grp.w, h: grp.h }
+      const gbase = { id: grp.id, type: 'grp', position: { x: grp.x, y: grp.y },
+        data: { label: grp.label, kind: grp.kind, titleSize: grp.titleSize, _sz: { w: grp.w, h: grp.h } },
+        draggable: false, selectable: false }
+      if (grp.parent) { gbase.parentId = grp.parent; gbase.extent = 'parent' }
+      nodes.push(gbase)
+    }
+    for (const n of (spec.nodes || [])) {
+      // 解析絕對座標(可能多層 parent)
+      let ax = n.x, ay = n.y, p = n.parent
+      while (p && grpById[p]) { ax += grpById[p].x; ay += grpById[p].y; p = grpById[p].parent }
+      box[n.id] = { x: ax, y: ay, w: n.w, h: n.h }
+
+      const fs = n.fontSize || 14
+      const base = { id: n.id, position: { x: n.x, y: n.y }, draggable: false, selectable: false }
+      if (n.parent) { base.parentId = n.parent; base.extent = 'parent' }
+      if (n.kind === 'diamond') {
+        nodes.push({ ...base, type: 'diamond', data: { label: n.label, fontSize: fs, _sz: { w: n.w, h: n.h } } })
+      } else {
+        nodes.push({ ...base, type: 'box', data: { label: n.label, fontSize: fs, kind: n.kind, _sz: { w: n.w, h: n.h } } })
+      }
+    }
+    const etype = spec.edgeType || 'smoothstep'
+    const edges = (spec.edges || []).map((e, i) => {
+      // 群組→群組的層級邊用直線置中; 其餘自動挑 handle
+      if (e.sh || e.th) return mkEdge(e, i, null, null, e.type || etype)
+      const a = box[e.s], b = box[e.t]
+      if (!a || !b) return mkEdge(e, i, null, null, e.type || etype)
+      const { sh, th } = pickHandles(a, b)
+      return mkEdge(e, i, sh, th, e.type || etype)
+    })
+    return { nodes, edges }
+  }
+
+  // ---- 主渲染 ----
+  let root = null
+  window.renderFig = (spec) => new Promise((resolve) => {
+    try {
+      const stage = document.getElementById('stage')
+      // layout: 'dagrec' = 資料驅動 compound dagre(畫布尺寸由佈局自動算出, 無逐圖 W/H)
+      let laid
+      if (spec.layout === 'dagrec') laid = layoutDagreCompound(spec)
+      else if (spec.layout === 'explicit') laid = layoutExplicit(spec)
+      else laid = layoutDagre(spec)
+      const { nodes, edges } = laid
+      const W = laid.W || spec.W, H = laid.H || spec.H
+      stage.style.width = W + 'px'
+      stage.style.height = H + 'px'
+      const App = () => h(ReactFlow, {
+        nodes, edges, nodeTypes,
+        fitView: true, fitViewOptions: { padding: 0.04 },
+        nodesDraggable: false, nodesConnectable: false, elementsSelectable: false,
+        panOnDrag: false, zoomOnScroll: false, preventScrolling: false,
+        proOptions: { hideAttribution: true }, minZoom: 0.05, maxZoom: 4,
+        defaultEdgeOptions: {},
+      })
+      if (root) root.unmount()
+      root = createRoot(stage)
+      root.render(h(App))
+      setTimeout(() => resolve({ ok: true, w: W, h: H }), 900)
+    } catch (e) { resolve({ ok: false, err: String(e && (e.stack || e.message) || e).slice(0, 400) }) }
+  })
+
+  document.title = 'READY'
+} catch (e) {
+  window.__err = String(e && (e.stack || e.message) || e).slice(0, 400)
+  document.title = 'FAIL'
+}
+</script></body></html>

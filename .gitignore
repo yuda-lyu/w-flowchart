@@ -1,0 +1,7 @@
+node_modules
+.opencode
+.claude
+tmp
+test-action
+test-screenshot
+test-html

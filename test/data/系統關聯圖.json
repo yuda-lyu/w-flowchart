@@ -1,0 +1,117 @@
+{
+  "dir": "LR",
+  "nodes": [
+    {
+      "id": "APP",
+      "label": "應用系統",
+      "cls": "purpleG"
+    },
+    {
+      "id": "a1",
+      "label": "GIS2D",
+      "cls": "purple",
+      "group": "APP"
+    },
+    {
+      "id": "a2",
+      "label": "GIS3D",
+      "cls": "purple",
+      "group": "APP"
+    },
+    {
+      "id": "a3",
+      "label": "需求管理",
+      "cls": "purple",
+      "group": "APP"
+    },
+    {
+      "id": "a4",
+      "label": "知識管理",
+      "cls": "purple",
+      "group": "APP"
+    },
+    {
+      "id": "a5",
+      "label": "特徵事件作用",
+      "cls": "purple",
+      "group": "APP"
+    },
+    {
+      "id": "a6",
+      "label": "評估模式流程",
+      "cls": "purple",
+      "group": "APP"
+    },
+    {
+      "id": "a7",
+      "label": "源項",
+      "cls": "purple",
+      "group": "APP"
+    },
+    {
+      "id": "API",
+      "label": "API 管理系統",
+      "cls": "blue"
+    },
+    {
+      "id": "PDM",
+      "label": "計畫資料管理系統",
+      "cls": "blue"
+    },
+    {
+      "id": "BAT",
+      "label": "批次上傳系統",
+      "cls": "orange"
+    },
+    {
+      "id": "AUTH",
+      "label": "單一登入＋權限管理",
+      "cls": "red"
+    },
+    {
+      "id": "URLC",
+      "label": "輔助網址控制系統",
+      "cls": "orange"
+    }
+  ],
+  "edges": [
+    {
+      "from": "APP",
+      "to": "API",
+      "label": "取用詮釋資料"
+    },
+    {
+      "from": "API",
+      "to": "PDM"
+    },
+    {
+      "from": "BAT",
+      "to": "PDM",
+      "label": "匯入"
+    },
+    {
+      "from": "AUTH",
+      "to": "APP",
+      "label": "共用驗證",
+      "kind": "dashed"
+    },
+    {
+      "from": "AUTH",
+      "to": "PDM",
+      "label": "共用驗證",
+      "kind": "dashed"
+    },
+    {
+      "from": "AUTH",
+      "to": "API",
+      "label": "共用驗證",
+      "kind": "dashed"
+    },
+    {
+      "from": "URLC",
+      "to": "APP",
+      "label": "跨系統調閱",
+      "kind": "dashed"
+    }
+  ]
+}
