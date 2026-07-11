@@ -1,0 +1,178 @@
+{
+  "dir": "TB",
+  "nodes": [
+    {
+      "id": "SITE",
+      "label": "入口網站",
+      "cls": "purpleG"
+    },
+    {
+      "id": "SEC_A",
+      "label": "商品瀏覽區",
+      "cls": "blueG2",
+      "group": "SITE"
+    },
+    {
+      "id": "SEC_B",
+      "label": "會員專區",
+      "cls": "greenG2",
+      "group": "SITE"
+    },
+    {
+      "id": "SEC_C",
+      "label": "購物流程",
+      "cls": "orangeG",
+      "group": "SITE"
+    },
+    {
+      "id": "a1",
+      "label": "首頁",
+      "cls": "blue",
+      "group": "SEC_A"
+    },
+    {
+      "id": "a2",
+      "label": "分類列表",
+      "cls": "blue",
+      "group": "SEC_A"
+    },
+    {
+      "id": "a3",
+      "label": "商品清單",
+      "cls": "blue",
+      "group": "SEC_A"
+    },
+    {
+      "id": "a4",
+      "label": "商品詳情",
+      "cls": "blue",
+      "group": "SEC_A"
+    },
+    {
+      "id": "b1",
+      "label": "登入頁",
+      "cls": "green",
+      "group": "SEC_B"
+    },
+    {
+      "id": "b2",
+      "label": "註冊頁",
+      "cls": "green",
+      "group": "SEC_B"
+    },
+    {
+      "id": "b3",
+      "label": "會員中心",
+      "cls": "green",
+      "group": "SEC_B"
+    },
+    {
+      "id": "b4",
+      "label": "訂單紀錄",
+      "cls": "green",
+      "group": "SEC_B"
+    },
+    {
+      "id": "c1",
+      "label": "購物車",
+      "cls": "orange",
+      "group": "SEC_C"
+    },
+    {
+      "id": "c2",
+      "label": "結帳頁",
+      "cls": "orange",
+      "group": "SEC_C"
+    },
+    {
+      "id": "c3",
+      "label": "付款頁",
+      "cls": "orange",
+      "group": "SEC_C"
+    },
+    {
+      "id": "c4",
+      "label": "完成頁",
+      "cls": "orange",
+      "group": "SEC_C"
+    },
+    {
+      "id": "d1",
+      "label": "客服頁",
+      "cls": "purple"
+    },
+    {
+      "id": "d2",
+      "label": "常見問題",
+      "cls": "purple"
+    }
+  ],
+  "edges": [
+    {
+      "from": "a1",
+      "to": "a2",
+      "label": "點擊"
+    },
+    {
+      "from": "a2",
+      "to": "a3",
+      "label": "點擊"
+    },
+    {
+      "from": "a3",
+      "to": "a4",
+      "label": "點擊"
+    },
+    {
+      "from": "b1",
+      "to": "b2",
+      "label": "點擊"
+    },
+    {
+      "from": "b1",
+      "to": "b3",
+      "label": "登入成功"
+    },
+    {
+      "from": "b3",
+      "to": "b4",
+      "label": "點擊"
+    },
+    {
+      "from": "c1",
+      "to": "c2",
+      "label": "點擊"
+    },
+    {
+      "from": "c2",
+      "to": "c3",
+      "label": "點擊"
+    },
+    {
+      "from": "c3",
+      "to": "c4",
+      "label": "付款完成"
+    },
+    {
+      "from": "a4",
+      "to": "d1",
+      "label": "點擊"
+    },
+    {
+      "from": "b1",
+      "to": "d1",
+      "label": "忘記密碼",
+      "kind": "dashed"
+    },
+    {
+      "from": "c1",
+      "to": "d1",
+      "label": "需要協助"
+    },
+    {
+      "from": "d1",
+      "to": "d2",
+      "label": "點擊"
+    }
+  ]
+}

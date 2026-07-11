@@ -1,0 +1,117 @@
+{
+  "dir": "TB",
+  "nodes": [
+    {
+      "id": "ROLE",
+      "label": "角色群組",
+      "cls": "purpleG"
+    },
+    {
+      "id": "RES",
+      "label": "資源群組",
+      "cls": "blueG"
+    },
+    {
+      "id": "r1",
+      "label": "管理員",
+      "cls": "purple",
+      "group": "ROLE"
+    },
+    {
+      "id": "r2",
+      "label": "編輯者",
+      "cls": "purple",
+      "group": "ROLE"
+    },
+    {
+      "id": "r3",
+      "label": "審核者",
+      "cls": "purple",
+      "group": "ROLE"
+    },
+    {
+      "id": "r4",
+      "label": "訪客",
+      "cls": "purple",
+      "group": "ROLE"
+    },
+    {
+      "id": "res1",
+      "label": "文章管理",
+      "cls": "blue",
+      "group": "RES"
+    },
+    {
+      "id": "res2",
+      "label": "使用者管理",
+      "cls": "blue",
+      "group": "RES"
+    },
+    {
+      "id": "res3",
+      "label": "系統設定",
+      "cls": "blue",
+      "group": "RES"
+    },
+    {
+      "id": "res4",
+      "label": "公開頁面",
+      "cls": "blue",
+      "group": "RES"
+    },
+    {
+      "id": "res5",
+      "label": "稽核紀錄",
+      "cls": "blue",
+      "group": "RES"
+    }
+  ],
+  "edges": [
+    {
+      "from": "RES",
+      "to": "r4",
+      "label": "公開存取"
+    },
+    {
+      "from": "ROLE",
+      "to": "res5",
+      "label": "稽核追蹤"
+    },
+    {
+      "from": "r1",
+      "to": "res1",
+      "label": "完整權限",
+      "kind": "dashed"
+    },
+    {
+      "from": "r1",
+      "to": "res2",
+      "label": "完整權限",
+      "kind": "dashed"
+    },
+    {
+      "from": "r1",
+      "to": "res3",
+      "label": "完整權限",
+      "kind": "dashed"
+    },
+    {
+      "from": "r2",
+      "to": "res1",
+      "label": "編輯權限",
+      "kind": "dashed"
+    },
+    {
+      "from": "r3",
+      "to": "res1",
+      "label": "審核權限",
+      "kind": "dashed"
+    },
+    {
+      "from": "r4",
+      "to": "res4",
+      "label": "檢視權限",
+      "kind": "dashed"
+    }
+  ]
+}

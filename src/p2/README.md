@@ -52,7 +52,7 @@
 
 ### 對外介面
 
-- 產線唯一輸出入口為 `genPng(data, opt)`，`data` 為正規化繪圖數據 `{ dir, nodes, edges }`，回傳 `Promise<Buffer>`（PNG）；`genPng` 自帶瀏覽器生命週期（`chromium.launch()` → 渲染 → `browser.close()`），呼叫端不需自行管理 Playwright。
+- 產線對外介面為 `genPng(data, opt)` 與 `genSvg(data, opt)`，`data` 為正規化繪圖數據 `{ dir, nodes, edges }`；`genPng` 回傳 `Promise<Buffer>`（PNG），`genSvg` 回傳 standalone SVG 字串（引擎原生輸出，另將頁面 `<style>` 之視覺修正 CSS 內嵌進 SVG 根元素使其脫離頁面仍忠實、`&nbsp;` 正規化為 `&#160;`）；兩者皆自帶瀏覽器生命週期（`chromium.launch()` → 渲染 → `browser.close()`），呼叫端不需自行管理 Playwright。
 - 統一由 `src/WFlowchart.mjs` 依 `mode === 'p2'` 呼叫，不提供批次流程或落地寫檔行為，是否寫檔、寫至何處由呼叫端決定。
 
 ## 自動化機制

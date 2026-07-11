@@ -14,16 +14,18 @@ import pixelmatch from 'pixelmatch'
 import { PNG } from 'pngjs'
 import { openStage, renderCase, runInvariants, helpers } from './lib.mjs'
 import { CASES } from './cases.mjs'
+import { DIAMOND_CASES } from './cases-diamond.mjs'
 import { FIGURES } from './figures.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
-const SNAP = resolve(__dir, 'pics')
+const SNAP = resolve(__dir, 'pics', 'p10')
 const MAXDIFF = 60   // PNG 容許之反鋸齒雜訊像素上限(真 regression 量級遠超此)
 const UPDATE = process.env.UPDATE_BASELINE === '1' || process.env.UPDATE_BASELINE === 'true'
 
-// 待測清單: 合成案 + 9 真圖(真圖為最重要之回歸案)
+// 待測清單: 合成案 + 菱形進出組合案 + 範例圖
 const items = []
 for (const c of CASES) items.push({ name: c.name, data: c.data, check: c.check, expect: c.expect, kind: '合成' })
+for (const c of DIAMOND_CASES) items.push({ name: c.name, data: c.data, check: c.check, kind: '菱形' })
 for (const f of FIGURES) items.push({ name: f.key, data: f.data, kind: '真圖' })
 
 // PNG 像素比對(反鋸齒容差): 回 { same, detail }
@@ -86,4 +88,54 @@ describe('p10 渲染回歸(結構不變量 + 快照基準)', function() {
             }
         })
     }
+
+    // 菱形進出組合規則之單元驗證: 直接對頁內繪製函式(window.__dia)驅動 13 種組合,
+    // 不受 ELK 佈局埠序限制(其中「同半側」類組合乾淨合成圖排不出來, 僅能在此層驗證; 見 cases-diamond.mjs 檔頭)。
+    it('菱形 13 種進出組合規則(單元驗證)', async function() {
+        const fails = await page.evaluate(() => {
+            const { diamondSlantMid, diamondInAnchor, routeOutFromVertex, routeInToAnchor } = window.__dia
+            const box = { x: 0, y: 0, w: 100, h: 100 }
+            const bottom = { ax: 'y', sg: 1, v: { x: 50, y: 100 } }
+            const near = (p, q) => Math.abs(p.x - q.x) <= 0.5 && Math.abs(p.y - q.y) <= 0.5
+            const mL = diamondSlantMid(box, bottom, -1)
+            const mR = diamondSlantMid(box, bottom, 1)
+            const v = bottom.v
+            // 合成路徑: 出=自底邊 x 下行轉出; 進=自下方沿 x 直上進入底邊
+            const mkOut = (x) => [{ x, y: 100 }, { x, y: 160 }, { x: x + 25, y: 160 }, { x: x + 25, y: 300 }]
+            const mkIn = (x) => [{ x: x + 40, y: 300 }, { x: x + 40, y: 160 }, { x, y: 160 }, { x, y: 100 }]
+            const out = []
+            function run(name, outXs, inXs, expectIn) {
+                const hasOut = outXs.length > 0
+                outXs.forEach((x, i) => {
+                    const p = mkOut(x)
+                    routeOutFromVertex(p, { ax: 'y', sg: 1, v: { x: 50, y: 100 } })
+                    if (!near(p[0], v)) out.push(`${name} 出${i} 未自頂點 (${p[0].x},${p[0].y})`)
+                })
+                inXs.forEach((x, i) => {
+                    const p = mkIn(x)
+                    const a = diamondInAnchor(box, bottom, hasOut, p[p.length - 1])
+                    routeInToAnchor(p, bottom, a)
+                    const e = p[p.length - 1], want = expectIn[i]
+                    if (!near(e, want)) out.push(`${name} 進${i} 錨點 (${e.x.toFixed(1)},${e.y.toFixed(1)}) ≠ (${want.x},${want.y})`)
+                })
+            }
+            run('1進', [], [30], [v])
+            run('1出', [30], [], [])
+            run('2進(同半側)', [], [20, 35], [v, v])
+            run('2進(不同半側)', [], [30, 70], [v, v])
+            run('2出(同半側)', [20, 35], [], [])
+            run('2出(不同半側)', [30, 70], [], [])
+            run('1進1出', [30], [70], [mR])
+            run('2進1出(進同半側)', [45], [60, 80], [mR, mR])
+            run('2進1出(進不同半側)', [45], [20, 80], [mL, mR])
+            run('1進2出(出同半側)', [20, 35], [70], [mR])
+            run('1進2出(出不同半側)', [20, 80], [45], [mL])
+            run('2進2出(進同,出同)', [20, 35], [60, 80], [mR, mR])
+            run('2進2出(進不同,出同)', [20, 35], [10, 80], [mL, mR])
+            run('2進2出(進同,出不同)', [20, 80], [55, 70], [mR, mR])
+            run('2進2出(進不同,出不同)', [20, 80], [40, 60], [mL, mR])
+            return out
+        })
+        assert.deepStrictEqual(fails, [], '規則單元驗證失敗:\n' + fails.join('\n'))
+    })
 })

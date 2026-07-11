@@ -28,7 +28,9 @@ export async function renderCase(page, data) {
     if (!res.ok) return { spec, res, svg: null, png: null }
     await page.evaluate(() => document.fonts && document.fonts.ready)
     await page.waitForTimeout(120)
-    const svg = await page.evaluate(() => document.getElementById('stage').innerHTML)
+    // innerHTML 為 HTML 序列化, 會把 U+00A0 輸出成具名實體 &nbsp;(XML 未定義, 存成獨立 .svg 檔用瀏覽器直開會解析失敗)
+    // → 正規化回數字實體 &#160;, 使基準檔為合法 standalone SVG
+    const svg = (await page.evaluate(() => document.getElementById('stage').innerHTML)).replace(/&nbsp;/g, '&#160;')
     const png = await page.locator('#stage svg').screenshot()
     return { spec, res, svg, png }
 }

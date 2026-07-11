@@ -208,13 +208,21 @@ try {
       if (n.parent && grpIds.has(n.parent)) g.setParent(n.id, n.parent)
     }
     // dagre compound 不能對「容器節點」直接連邊(ranking 階段會崩),
-    //   故 ranking 用「代表葉節點」替代容器端點(取該容器第一個葉子後代);
-    //   實際繪線仍用容器框(後段 pickHandles 以絕對 box 計算)。此為通用處理, 非逐圖。
-    const repLeaf = {}
+    //   故 ranking 用「代表葉節點」替代容器端點(取該容器數據序第一個可達葉子後代);
+    //   容器內可能只有子容器(深巢狀), 故須遞迴下鑽。實際繪線仍用容器框(後段 pickHandles 以絕對 box 計算)。此為通用處理, 非逐圖。
+    const childByParent = {}
     for (const n of rawNodes) {
-      if (n.parent && grpIds.has(n.parent) && !grpIds.has(n.id) && repLeaf[n.parent] === undefined) repLeaf[n.parent] = n.id
+      if (n.parent) (childByParent[n.parent] = childByParent[n.parent] || []).push(n)
     }
-    const rankId = id => grpIds.has(id) ? (repLeaf[id] || id) : id
+    const firstLeaf = (gid) => {
+      for (const ch of (childByParent[gid] || [])) {
+        if (!grpIds.has(ch.id)) return ch.id
+        const r = firstLeaf(ch.id)
+        if (r) return r
+      }
+      return null
+    }
+    const rankId = id => grpIds.has(id) ? (firstLeaf(id) || id) : id
     const seenRank = new Set()
     for (const e of rawEdges) {
       const s = rankId(e.s), t = rankId(e.t)

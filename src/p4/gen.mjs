@@ -4,10 +4,11 @@
 import { chromium } from 'playwright'
 import { pkgScript } from '../common/pkg.mjs'
 
-// cytoscape + dagre + cytoscape-dagre 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
+// cytoscape + dagre + cytoscape-dagre + cytoscape-svg 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
 const CYTOSCAPE_JS = pkgScript('cytoscape/dist/cytoscape.min.js')
 const DAGRE_JS = pkgScript('dagre/dist/dagre.min.js')
 const CYTOSCAPE_DAGRE_JS = pkgScript('cytoscape-dagre/dist/cytoscape-dagre.js')
+const CYTOSCAPE_SVG_JS = pkgScript('cytoscape-svg/cytoscape-svg.js')
 
 // 正規化數據 → cytoscape elements(節點帶 parent=group; 邊 dashed→classes）
 function toEls(data) {
@@ -41,18 +42,26 @@ const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
 <script>${CYTOSCAPE_JS}</script>
 <script>${DAGRE_JS}</script>
 <script>${CYTOSCAPE_DAGRE_JS}</script>
+<script>${CYTOSCAPE_SVG_JS}</script>
 </head><body style="margin:0;background:#fff">
 <div id="cy" style="width:1400px;height:1400px;background:#fff"></div>
 <script>
 if (window.cytoscapeDagre) { try { cytoscape.use(window.cytoscapeDagre) } catch(e){} }
-window.renderFig = function(els, styleJson, rankDir){ return new Promise(function(resolve){
+if (window.cytoscapeSvg) { try { cytoscape.use(window.cytoscapeSvg) } catch(e){} }
+// mode: 'png'(預設) 或 'svg' — 版面/元素/樣式建置流程共用, 僅末端輸出格式不同(genPng 行為不變)
+window.renderFig = function(els, styleJson, rankDir, mode){ return new Promise(function(resolve){
   try {
     var cy = cytoscape({ container: document.getElementById('cy'), elements: els, style: JSON.parse(styleJson) })
     els.forEach(function(x){ if (x.classes && x.data && x.data.id) cy.getElementById(x.data.id).addClass(x.classes) })
     var l = cy.layout({ name:'dagre', rankDir:rankDir, nodeSep:42, rankSep:55, edgeSep:18 })
     l.promiseOn('layoutstop').then(function(){
       setTimeout(function(){
-        try { window.__png = cy.png({ full:true, scale:2, bg:'#ffffff', output:'base64' }); var bb=cy.elements().boundingBox(); resolve({ ok:true, w:Math.round(bb.w), h:Math.round(bb.h) }) }
+        try {
+          var bb=cy.elements().boundingBox()
+          if (mode === 'svg') { window.__svg = cy.svg({ full:true, scale:2, bg:'#ffffff' }) }
+          else { window.__png = cy.png({ full:true, scale:2, bg:'#ffffff', output:'base64' }) }
+          resolve({ ok:true, w:Math.round(bb.w), h:Math.round(bb.h) })
+        }
         catch(e){ resolve({ ok:false, err:String(e.message||e) }) }
       }, 250)
     })
@@ -62,21 +71,38 @@ window.renderFig = function(els, styleJson, rankDir){ return new Promise(functio
 window.__ready = true
 </script></body></html>`
 
-// 單張渲染 — 供其他模組 import 使用
-// data: 正規化繪圖數據 { dir, nodes, edges }(caller 已先做 label 衍生)
-// 回傳: PNG 圖片的 Node Buffer
-export async function genPng(data, opt = {}) {
+// 共用渲染流程 — 啟動 headless 頁面, 建置 cytoscape + dagre 版面, 回傳指定 mode 之末端輸出(base64 png 或 svg 字串)
+// 供 genPng/genSvg 共用(genPng 行為不變: mode 傳 'png' 與原本 3 參數呼叫等價)
+async function renderPage(data, mode) {
     const browser = await chromium.launch()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 1 })
         await page.setContent(html, { waitUntil: 'load' })
         await page.waitForFunction(() => window.__ready, { timeout: 60000 }).catch(() => {})
         await page.evaluate(() => document.fonts && document.fonts.ready)
-        const res = await page.evaluate(([els, st, rd]) => window.renderFig(els, st, rd), [toEls(data), style, data.dir])
+        const res = await page.evaluate(([els, st, rd, md]) => window.renderFig(els, st, rd, md), [toEls(data), style, data.dir, mode])
         if (!res.ok) throw new Error(res.err)
-        const b64 = await page.evaluate(() => window.__png)
-        return Buffer.from(b64, 'base64')
+        return await page.evaluate((m) => (m === 'svg' ? window.__svg : window.__png), mode)
     } finally {
         await browser.close()
     }
+}
+
+// 單張渲染 — 供其他模組 import 使用
+// data: 正規化繪圖數據 { dir, nodes, edges }(caller 已先做 label 衍生)
+// 回傳: PNG 圖片的 Node Buffer
+export async function genPng(data, opt = {}) {
+    const b64 = await renderPage(data, 'png')
+    return Buffer.from(b64, 'base64')
+}
+
+// 單張渲染 — 供其他模組 import 使用(cytoscape-svg 外掛匯出, 與 genPng 共用相同版面/樣式/scale)
+// data: 正規化繪圖數據 { dir, nodes, edges }(caller 已先做 label 衍生)
+// 回傳: SVG 字串
+export async function genSvg(data, opt = {}) {
+    let svg = await renderPage(data, 'svg')
+    svg = svg.replace(/&nbsp;/g, '&#160;')
+    if (!/\sxmlns=/.test(svg)) svg = svg.replace('<svg', '<svg xmlns="http://www.w3.org/2000/svg"')
+    if (!/font-family/.test(svg)) svg = svg.replace('>', '><style>text{font-family:\'Microsoft JhengHei\',sans-serif}</style>')
+    return svg
 }

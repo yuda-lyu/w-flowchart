@@ -104,7 +104,23 @@ export const CASES = [
         },
         check(spec, geom, h) {
             const D = h.node('D')
-            return [{ name: 'D 為菱形', pass: !!D && D.kind === 'diamond', detail: D && `kind=${D.kind}` }]
+            const out = [{ name: 'D 為菱形', pass: !!D && D.kind === 'diamond', detail: D && `kind=${D.kind}` }]
+            // 菱形多條外連邊皆由底部「頂點」連出(不與斜邊空接; e1=D→Y, e2=D→N)
+            if (D) {
+                const vx = D.x + D.w / 2, vy = D.y + D.h
+                for (const eid of ['e1', 'e2']) {
+                    const ge = geom.edges.find(e => e.id === eid)
+                    const s0 = ge && ge.segs[0] && ge.segs[0][0]
+                    out.push({ name: `${eid} 由菱形底角連出`, pass: !!s0 && Math.abs(s0.x - vx) <= 2 && Math.abs(s0.y - vy) <= 2, detail: s0 && `s0=(${s0.x.toFixed(1)},${s0.y.toFixed(1)}) 頂點=(${vx.toFixed(1)},${vy.toFixed(1)})` })
+                }
+                // 連入邊終點貼菱形「斜邊」(菱形方程 |dx|/hw+|dy|/hh ≈ 1; e0=P→D)
+                const ge0 = geom.edges.find(e => e.id === 'e0')
+                const seg0 = ge0 && ge0.segs[0]
+                const pE = seg0 && seg0[seg0.length - 1]
+                const eq = pE && (Math.abs(pE.x - (D.x + D.w / 2)) / (D.w / 2) + Math.abs(pE.y - (D.y + D.h / 2)) / (D.h / 2))
+                out.push({ name: 'e0 連入端點貼斜邊', pass: !!pE && eq > 0.9 && eq < 1.1, detail: pE && `eq=${eq.toFixed(3)}` })
+            }
+            return out
         },
     },
 

@@ -1,0 +1,134 @@
+{
+  "dir": "TB",
+  "nodes": [
+    {
+      "id": "FE",
+      "label": "前台層",
+      "cls": "blueG"
+    },
+    {
+      "id": "SV",
+      "label": "服務層",
+      "cls": "greenG"
+    },
+    {
+      "id": "DB",
+      "label": "資料層",
+      "cls": "orangeG"
+    },
+    {
+      "id": "fe1",
+      "label": "網頁前端",
+      "cls": "blue",
+      "group": "FE"
+    },
+    {
+      "id": "fe2",
+      "label": "行動應用",
+      "cls": "blue",
+      "group": "FE"
+    },
+    {
+      "id": "fe3",
+      "title": "前端共用元件",
+      "items": [
+        "元件庫",
+        "狀態管理",
+        "路由設定"
+      ],
+      "cls": "blue",
+      "group": "FE"
+    },
+    {
+      "id": "sv1",
+      "label": "API 閘道",
+      "cls": "green",
+      "group": "SV"
+    },
+    {
+      "id": "sv2",
+      "title": "訂單服務",
+      "items": [
+        "訂單建立",
+        "訂單查詢",
+        "退款處理"
+      ],
+      "cls": "green",
+      "group": "SV"
+    },
+    {
+      "id": "sv3",
+      "title": "會員服務",
+      "items": [
+        "註冊登入",
+        "權限驗證"
+      ],
+      "cls": "green",
+      "group": "SV"
+    },
+    {
+      "id": "sv4",
+      "label": "通知服務",
+      "cls": "green",
+      "group": "SV"
+    },
+    {
+      "id": "db1",
+      "label": "主要資料庫",
+      "cls": "orange",
+      "group": "DB"
+    },
+    {
+      "id": "db2",
+      "label": "快取",
+      "cls": "orange",
+      "group": "DB"
+    },
+    {
+      "id": "db3",
+      "label": "訊息佇列",
+      "cls": "orange",
+      "group": "DB"
+    }
+  ],
+  "edges": [
+    {
+      "from": "FE",
+      "to": "SV",
+      "label": "前台請求"
+    },
+    {
+      "from": "SV",
+      "to": "DB",
+      "label": "資料存取"
+    },
+    {
+      "from": "fe1",
+      "to": "sv1",
+      "label": "呼叫 API"
+    },
+    {
+      "from": "fe2",
+      "to": "sv1",
+      "label": "呼叫 API"
+    },
+    {
+      "from": "sv2",
+      "to": "db1"
+    },
+    {
+      "from": "sv3",
+      "to": "db1"
+    },
+    {
+      "from": "sv2",
+      "to": "db2",
+      "label": "快取查詢",
+      "kind": "dashed"
+    },
+    {
+      "from": "sv4",
+      "to": "db3"
+    }
+  ]
+}

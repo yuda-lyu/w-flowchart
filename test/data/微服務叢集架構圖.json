@@ -1,0 +1,132 @@
+{
+  "dir": "TB",
+  "nodes": [
+    {
+      "id": "CLU",
+      "label": "服務叢集",
+      "cls": "blueG"
+    },
+    {
+      "id": "NS1",
+      "label": "訂單命名空間",
+      "cls": "greenG",
+      "group": "CLU"
+    },
+    {
+      "id": "NS2",
+      "label": "帳務命名空間",
+      "cls": "greenG",
+      "group": "CLU"
+    },
+    {
+      "id": "SG1",
+      "label": "訂單服務群",
+      "cls": "orangeG",
+      "group": "NS1"
+    },
+    {
+      "id": "SG2",
+      "label": "庫存服務群",
+      "cls": "orangeG",
+      "group": "NS1"
+    },
+    {
+      "id": "SG3",
+      "label": "帳務服務群",
+      "cls": "orangeG",
+      "group": "NS2"
+    },
+    {
+      "id": "o1",
+      "label": "訂單 API",
+      "cls": "orange",
+      "group": "SG1"
+    },
+    {
+      "id": "o2",
+      "title": "訂單背景任務",
+      "items": [
+        "排程掃描",
+        "失敗重試"
+      ],
+      "cls": "orange",
+      "group": "SG1"
+    },
+    {
+      "id": "i1",
+      "label": "庫存 API",
+      "cls": "orange",
+      "group": "SG2"
+    },
+    {
+      "id": "i2",
+      "label": "庫存快取",
+      "cls": "orange",
+      "group": "SG2"
+    },
+    {
+      "id": "p1",
+      "title": "付款服務",
+      "items": [
+        "扣款",
+        "對帳"
+      ],
+      "cls": "orange",
+      "group": "SG3"
+    },
+    {
+      "id": "p2",
+      "label": "帳務 API",
+      "cls": "orange",
+      "group": "SG3"
+    },
+    {
+      "id": "GW",
+      "label": "API 閘道",
+      "cls": "purple"
+    },
+    {
+      "id": "MQ",
+      "label": "訊息佇列",
+      "cls": "purple"
+    }
+  ],
+  "edges": [
+    {
+      "from": "GW",
+      "to": "NS1",
+      "label": "路由請求"
+    },
+    {
+      "from": "GW",
+      "to": "NS2",
+      "label": "路由請求"
+    },
+    {
+      "from": "SG1",
+      "to": "SG2",
+      "label": "查詢庫存"
+    },
+    {
+      "from": "SG1",
+      "to": "MQ",
+      "label": "發布訂單事件",
+      "kind": "dashed"
+    },
+    {
+      "from": "SG3",
+      "to": "MQ",
+      "label": "訂閱付款事件",
+      "kind": "dashed"
+    },
+    {
+      "from": "o1",
+      "to": "i1",
+      "label": "扣減庫存"
+    },
+    {
+      "from": "p1",
+      "to": "p2"
+    }
+  ]
+}

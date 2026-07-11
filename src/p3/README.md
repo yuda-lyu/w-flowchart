@@ -6,7 +6,7 @@
 - **渲染方式**：於頁面注入 `window.renderAndDetect(src)` 函式，呼叫 `window.nomnoml.renderSvg(src)` 將 DSL 字串渲染為 SVG，並將結果寫入 `#box` div 的 innerHTML。
 - **截圖目標**：以 Playwright locator `#box svg` 精確擷取 SVG 元素本身，排除頁面邊距干擾。
 - **解析度**：啟動 `browser.newPage({ deviceScaleFactor: 2 })`，輸出為 2× 實體像素的高解析度 PNG。
-- **呼叫方式**：`genPng(data, opt)` 為單張渲染函式，接受正規化繪圖數據 `{ dir, nodes, edges }`，內部自建 browser/page 並於結束時關閉，回傳 PNG 的 Node Buffer（不落地檔案），由 `src/WFlowchart.mjs` 統一調用（`mode: 'p3'`）。
+- **呼叫方式**：`genPng(data, opt)` 為單張渲染函式，接受正規化繪圖數據 `{ dir, nodes, edges }`，內部自建 browser/page 並於結束時關閉，回傳 PNG 的 Node Buffer（不落地檔案），由 `src/WFlowchart.mjs` 統一調用（`mode: 'p3'`）；同結構之 `genSvg(data, opt)` 回傳 `#box` 內引擎原生輸出之 SVG 字串（`&nbsp;` 正規化為 `&#160;`）。
 
 ## 產製原理（資料驅動）
 

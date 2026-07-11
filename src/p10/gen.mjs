@@ -54,7 +54,91 @@ const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>
 const mix = (a,b,t) => { const pa=[1,3,5].map(i=>parseInt(a.slice(i,i+2),16)), pb=[1,3,5].map(i=>parseInt(b.slice(i,i+2),16)); return '#'+pa.map((x,i)=>Math.round(x*(1-t)+pb[i]*t).toString(16).padStart(2,'0')).join('') }
 // 確保「起點後第一段」與「終點前最後一段」之直線長度 >= MIN(轉折不貼端點, 維持箭頭指向性)。
 //   做法: 末段過短時, 沿趨近軸向把「最後轉角」與「其前一轉角」一起後移(兩者同移=保正交); 需 >=4 點才不動端點。
-function ensureStub(pts, MIN){
+// ── 菱形端點貼齊(ELK 以外接矩形算端點, 落在矩形邊上非頂點處會與菱形斜邊「空接」) ──
+//   規則(共進共出, 每側獨立; 詳 p10/README):
+//     R1 共出: 該側所有「出」一律由該側「頂點」出發, 多條共用首段後於各自高度 90 度轉出(分岔)。
+//     R2 共進: 該側「無出」→ 全部匯入「頂點」(各自橫移至中軸, 共用末段, 箭頭重合);
+//              該側「有出」→ 依「半側」匯入該半側「斜邊中點」(頂點讓給出, 進出不同點)。
+//   正交線交叉允許存在(正交路由常態), 一致性優先。
+
+// 判定端點落在外接矩形哪一側; 回 { ax, sg, v }(離開軸/正負/該側頂點), 不在邊上回 null
+function diamondSide(p, box){
+  const cx = box.x + box.w/2, cy = box.y + box.h/2, EPS = 1.5
+  if (Math.abs(p.y - (box.y + box.h)) < EPS) return { ax: 'y', sg: 1, v: { x: cx, y: box.y + box.h } }
+  if (Math.abs(p.y - box.y) < EPS) return { ax: 'y', sg: -1, v: { x: cx, y: box.y } }
+  if (Math.abs(p.x - box.x) < EPS) return { ax: 'x', sg: -1, v: { x: box.x, y: cy } }
+  if (Math.abs(p.x - (box.x + box.w)) < EPS) return { ax: 'x', sg: 1, v: { x: box.x + box.w, y: cy } }
+  return null
+}
+
+// 該側某「半側」之斜邊中點(混合側的進匯點); half=+1 取座標較大半側, -1 反之
+function diamondSlantMid(box, side, half){
+  const cx = box.x + box.w/2, cy = box.y + box.h/2, hw = box.w/2, hh = box.h/2
+  if (side.ax === 'y') return { x: cx + half * hw / 2, y: cy + side.sg * hh / 2 }
+  return { x: cx + side.sg * hw / 2, y: cy + half * hh / 2 }
+}
+
+// R1 共出: 出邊起點改自「頂點」出發
+function routeOutFromVertex(pts, side){
+  const p0 = pts[0], p1 = pts[1]
+  const EPS = 1.5, J = 18
+  const v = side.v
+  const off = side.ax === 'y' ? Math.abs(p0.x - v.x) : Math.abs(p0.y - v.y)
+  if (off < EPS) return   // 已在頂點(置中), 不動
+  const alongAxis = side.ax === 'y' ? Math.abs(p1.x - p0.x) < EPS : Math.abs(p1.y - p0.y) < EPS
+  if (!alongAxis) { pts.unshift(v); return }   // 原首段即沿側邊橫走: 自頂點先橫走接回
+  if (pts.length > 2) {
+    // 有後續轉折: 頂點 → 沿軸行至原首個轉折高度 → 橫向接回(單一 L 型; 轉折可貼近頂點)
+    const q1 = side.ax === 'y' ? { x: v.x, y: p1.y } : { x: p1.x, y: v.y }
+    pts.splice(0, 1, v, q1)
+    return
+  }
+  // 無轉折之直線邊: 於頂點外側作雙直角接回各自路線(距離取 J 與可用長度之小者)
+  const segLen = side.ax === 'y' ? (p1.y - p0.y) * side.sg : (p1.x - p0.x) * side.sg
+  const j = Math.min(J, Math.max(4, segLen / 2))
+  const q1 = side.ax === 'y' ? { x: v.x, y: v.y + side.sg * j } : { x: v.x + side.sg * j, y: v.y }
+  const q2 = side.ax === 'y' ? { x: p0.x, y: v.y + side.sg * j } : { x: v.x + side.sg * j, y: p0.y }
+  pts.splice(0, 1, v, q1, q2)
+}
+
+// R2 決策: 進匯點 = 該側無出 → 頂點; 有出 → 依端點所在半側之斜邊中點
+function diamondInAnchor(box, side, hasOutOnSide, pE){
+  if(!hasOutOnSide) return { x: side.v.x, y: side.v.y }
+  const half = (side.ax === 'y' ? (pE.x - (box.x + box.w/2)) : (pE.y - (box.y + box.h/2))) >= 0 ? 1 : -1
+  return diamondSlantMid(box, side, half)
+}
+
+// R2 共進: 進邊終點改匯入 anchor(頂點或半側斜邊中點)
+//   橫向差距小且末段前為可伸縮橫向段 → 整段末端直線「平移」對齊 anchor 軸線(零多餘轉折);
+//   否則於側外 J 處橫移 bus 再沿軸進入 anchor。
+function routeInToAnchor(pts, side, anchor){
+  const pE = pts[pts.length - 1], pP = pts[pts.length - 2]
+  const EPS = 1.5, J = 18, SLIDE = 40   // SLIDE: 可平移之最大橫向差距(過大恐撞鄰近元素, 改走 bus)
+  const alongAxis = side.ax === 'y' ? Math.abs(pP.x - pE.x) < EPS : Math.abs(pP.y - pE.y) < EPS
+  if (!alongAxis) return   // 末段非沿進入軸(罕見), 保留原路由
+  const lateral = side.ax === 'y' ? Math.abs(pE.x - anchor.x) : Math.abs(pE.y - anchor.y)
+  if (lateral < EPS) {
+    pts[pts.length - 1] = { x: anchor.x, y: anchor.y }   // 已在 anchor 軸線上: 直接沿軸進入
+    return
+  }
+  if (lateral <= SLIDE && pts.length >= 3) {
+    const pP2 = pts[pts.length - 3]
+    const prevHorizontal = side.ax === 'y' ? Math.abs(pP2.y - pP.y) < EPS : Math.abs(pP2.x - pP.x) < EPS
+    if (prevHorizontal) {
+      if (side.ax === 'y') pP.x = anchor.x; else pP.y = anchor.y
+      pts[pts.length - 1] = { x: anchor.x, y: anchor.y }
+      return
+    }
+  }
+  const Lv = side.ax === 'y' ? side.v.y + side.sg * J : side.v.x + side.sg * J   // 側外橫移層
+  const segOK = side.ax === 'y' ? (pP.y - Lv) * side.sg > 2 : (pP.x - Lv) * side.sg > 2   // 原末段須延伸到橫移層之外
+  if (!segOK) { pts[pts.length - 1] = { x: anchor.x, y: anchor.y }; return }   // 空間不足: 直接斜線前最短接入(極罕見)
+  const b1 = side.ax === 'y' ? { x: pE.x, y: Lv } : { x: Lv, y: pE.y }
+  const b2 = side.ax === 'y' ? { x: anchor.x, y: Lv } : { x: Lv, y: anchor.y }
+  pts.splice(pts.length - 1, 1, b1, b2, { x: anchor.x, y: anchor.y })
+}
+
+function ensureStub(pts, MIN, skipStart){
   function fixEnd(p){
     const n=p.length; if(n<4) return
     const C=p[n-1], B=p[n-2]
@@ -64,10 +148,15 @@ function ensureStub(pts, MIN){
     p[n-2]={x:B.x-ux*need, y:B.y-uy*need}
     p[n-3]={x:p[n-3].x-ux*need, y:p[n-3].y-uy*need}
   }
+  // 終點端(箭頭側)一律套最低門檻——含菱形貼齊後之路徑(bus 支線本給滿 J; 平移/保留支線之轉角平移不破壞正交)
   fixEnd(pts)
-  pts.reverse(); fixEnd(pts); pts.reverse()
+  // 起點端僅於「菱形頂點分岔」時跳過(分岔轉折貼近頂點屬預期; 後移轉角會與其後路徑段脫勾扭出斜線)
+  if(!skipStart){ pts.reverse(); fixEnd(pts); pts.reverse() }
   return pts
 }
+
+// 供測試直接驗證菱形端點規則之純函式(不影響渲染)
+window.__dia = { diamondSide, diamondSlantMid, diamondInAnchor, routeOutFromVertex, routeInToAnchor }
 
 window.renderFig = async function(spec){
   try {
@@ -92,7 +181,7 @@ window.renderFig = async function(spec){
     //   例外: 含循環(如流程之退回邊)的圖, 位置提示會干擾分層使入口節點偏離頂端 → 根層不加提示(容器內仍保序)。
     const ORDER_OPTS = { 'elk.layered.crossingMinimization.semiInteractive':'true' }
     const hasCycle = (() => { const adj={}; spec.edges.forEach(e=>{ (adj[e.from]=adj[e.from]||[]).push(e.to) }); const st={}; const dfs=(u)=>{ st[u]=1; for(const v of (adj[u]||[])){ if(st[v]===1) return true; if(!st[v] && dfs(v)) return true } st[u]=2; return false }; return Object.keys(adj).some(u=>!st[u]&&dfs(u)) })()
-    const gOpts = { 'elk.padding':'[top=10,left=14,bottom=14,right=14]', 'elk.nodeLabels.placement':'[H_CENTER, V_TOP, INSIDE]', 'elk.algorithm':'layered', 'elk.direction':dir, 'elk.edgeRouting':'ORTHOGONAL', 'elk.hierarchyHandling':'INCLUDE_CHILDREN', 'elk.spacing.nodeNode':'28', 'elk.layered.spacing.nodeNodeBetweenLayers':'30', 'elk.spacing.edgeEdge':'22', 'elk.layered.spacing.edgeEdgeBetweenLayers':'24', ...ORDER_OPTS }
+    const gOpts = { 'elk.layered.nodePlacement.bk.fixedAlignment':'BALANCED', 'elk.padding':'[top=10,left=14,bottom=14,right=14]', 'elk.nodeLabels.placement':'[H_CENTER, V_TOP, INSIDE]', 'elk.algorithm':'layered', 'elk.direction':dir, 'elk.edgeRouting':'ORTHOGONAL', 'elk.hierarchyHandling':'INCLUDE_CHILDREN', 'elk.spacing.nodeNode':'28', 'elk.layered.spacing.nodeNodeBetweenLayers':'30', 'elk.spacing.edgeEdge':'22', 'elk.layered.spacing.edgeEdgeBetweenLayers':'24', ...ORDER_OPTS }
     function elkEdge(e){ const lab = e.label ? [{ text:e.label, width: measure(e.label,EFS,300).w, height:18 }] : []; return { id:e.id, sources:[e.from], targets:[e.to], labels:lab } }
     function build(parentId, padMap, wrapAR){
       const children=[], edges=[]
@@ -108,7 +197,7 @@ window.renderFig = async function(spec){
       spec.edges.filter(e=>e.container===parentId).forEach(e=>{ edges.push(elkEdge(e)) })
       return { children, edges }
     }
-    const rootOpts = { 'elk.algorithm':'layered', 'elk.direction':dir, 'elk.edgeRouting':'ORTHOGONAL', 'elk.hierarchyHandling':'INCLUDE_CHILDREN', 'elk.spacing.nodeNode':'30', 'elk.layered.spacing.nodeNodeBetweenLayers':'34', 'elk.spacing.edgeNode':'24', 'elk.spacing.edgeEdge':'22', 'elk.layered.spacing.edgeEdgeBetweenLayers':'24', 'elk.layered.spacing.edgeNodeBetweenLayers':'26', ...(hasCycle ? { 'elk.layered.cycleBreaking.strategy':'MODEL_ORDER' } : ORDER_OPTS) }
+    const rootOpts = { 'elk.layered.nodePlacement.bk.fixedAlignment':'BALANCED', 'elk.algorithm':'layered', 'elk.direction':dir, 'elk.edgeRouting':'ORTHOGONAL', 'elk.hierarchyHandling':'INCLUDE_CHILDREN', 'elk.spacing.nodeNode':'30', 'elk.layered.spacing.nodeNodeBetweenLayers':'34', 'elk.spacing.edgeNode':'24', 'elk.spacing.edgeEdge':'22', 'elk.layered.spacing.edgeEdgeBetweenLayers':'24', 'elk.layered.spacing.edgeNodeBetweenLayers':'26', ...(hasCycle ? { 'elk.layered.cycleBreaking.strategy':'MODEL_ORDER' } : ORDER_OPTS) }
     const elk = new ELK()
     const mkGraph = (pm, war) => { const rb = build(null, pm, war); return { id:'root', layoutOptions:rootOpts, children:rb.children, edges:rb.edges } }
     let res = await elk.layout(mkGraph({}, {}))
@@ -151,14 +240,121 @@ window.renderFig = async function(spec){
     groupsOut.sort((a,b)=>a.depth-b.depth).forEach(o=>{
       svg+='<rect x="'+(o.x)+'" y="'+(o.y)+'" width="'+o.w+'" height="'+o.h+'" rx="8" fill="'+o.g.fill+'" fill-opacity="0.38" stroke="'+o.g.stroke+'" stroke-width="2"/>'
       const tw=o.lbl?o.lbl.width+12:o.w, th=o.lbl?o.lbl.height+6:24, tx=o.x+Math.max(0,(o.w-tw)/2), ty=o.y+(o.lbl?o.lbl.y:5)
-      svg+='<foreignObject x="'+tx+'" y="'+ty+'" width="'+tw+'" height="'+th+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="text-align:center;font-weight:bold;font-size:'+GFS+'px;color:'+o.g.stroke+';line-height:1.3">'+esc(o.g.label)+'</div></foreignObject>'
+      svg+='<foreignObject x="'+tx+'" y="'+ty+'" width="'+tw+'" height="'+th+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="text-align:center;font-weight:bold;font-size:'+GFS+'px;color:'+o.g.stroke+';line-height:1.3;overflow-wrap:break-word;word-break:normal">'+esc(o.g.label)+'</div></foreignObject>'
     })
     // 2) 邊(在節點之下、容器之上)
+    const nodeBoxById={}; nodesOut.forEach(o=>{ nodeBoxById[o.n.id]={ x:o.x, y:o.y, w:o.w, h:o.h, diamond:!!o.n.diamond } })
+    const specEdgeById={}; spec.edges.forEach(se=>{ specEdgeById[se.id]=se })
+    // 2a) 蒐集各 section 絕對路徑點 + 統計各菱形「各側」進出數(側=上/下/左/右, key: nodeId|軸|正負)。
+    //     規則: 純出側→全部由頂點分岔; 純入側→各自貼斜邊; 混合側→全部貼斜邊
+    //     (混合側若連出走頂點+橫向接回, 橫向段必與夾在中間的連入直線交叉; 全貼斜邊則零共用點、零新增交叉)
+    const drawList=[], sideMix={}
     edgesOut.forEach(o=>{
-      const e=o.e
-      ;(e.sections||[]).forEach(sec=>{
+      const e=o.e, se=specEdgeById[e.id]
+      const srcBox=se&&nodeBoxById[se.from], tgtBox=se&&nodeBoxById[se.to]
+      const secs=(e.sections||[]).map(sec=>{
         const pts=[sec.startPoint].concat(sec.bendPoints||[]).concat([sec.endPoint]).map(p=>({x:o.ox+p.x, y:o.oy+p.y}))
-        ensureStub(pts, 18)
+        const item={ pts }
+        if(srcBox&&srcBox.diamond){ item.srcSide=diamondSide(pts[0], srcBox); if(item.srcSide){ const k=se.from+'|'+item.srcSide.ax+item.srcSide.sg; (sideMix[k]=sideMix[k]||{in:0,out:0}).out++ } }
+        if(tgtBox&&tgtBox.diamond){ item.tgtSide=diamondSide(pts[pts.length-1], tgtBox); if(item.tgtSide){ const k=se.to+'|'+item.tgtSide.ax+item.tgtSide.sg; (sideMix[k]=sideMix[k]||{in:0,out:0}).in++ } }
+        return item
+      })
+      drawList.push({ o, e, se, srcBox, tgtBox, secs })
+    })
+    // 2a-2) 通用路徑化簡: ELK 階層邊(INCLUDE_CHILDREN)常見「先繞反方向再折返」之 S/U 形繞行,
+    //   反覆對「三段式窗」(平行-垂直-平行)嘗試收斂成兩段, 僅在碰撞偵測全過才接受:
+    //   不撞節點框/容器標題帶/邊標籤、不與他邊平行段貼齊併線; 端點段軸向與方向不可翻轉(維持節點進出方向,
+    //   化簡先於菱形貼齊故不干擾貼齊規則); 本邊標籤若因化簡脫離路徑則整段還原(標籤座標由 ELK 依原路徑決定)。
+    const obstacles=[]
+    nodesOut.forEach(o=>{ obstacles.push({ x:o.x-8, y:o.y-8, w:o.w+16, h:o.h+16 }) })
+    groupsOut.forEach(o=>{ if(!o.lbl) return; const tw=o.lbl.width+12, th=o.lbl.height+6, tx=o.x+Math.max(0,(o.w-tw)/2), ty=o.y+o.lbl.y; obstacles.push({ x:tx-4, y:ty-4, w:tw+8, h:th+8 }) })
+    const labelBoxes=[]
+    drawList.forEach(dd=>{ (dd.e.labels||[]).forEach(l=>{ if(!l.text) return; labelBoxes.push({ x:dd.o.ox+(l.x||0)-2, y:dd.o.oy+(l.y||0)-2, w:(l.width||40)+10, h:(l.height||18)+8 }) }) })
+    function segHitsBox(a,b,box){   // 軸對齊線段 vs 矩形(線段必水平或垂直)
+      const x1=Math.min(a.x,b.x), x2=Math.max(a.x,b.x), y1=Math.min(a.y,b.y), y2=Math.max(a.y,b.y)
+      return x2>box.x && x1<box.x+box.w && y2>box.y && y1<box.y+box.h
+    }
+    function segOverlapsOther(a,b,selfItem){   // 與他邊平行段貼齊重疊(側距<6 且共線範圍>10)→ 視覺併線, 拒絕
+      const horiz = Math.abs(a.y-b.y)<0.5
+      for(const dd of drawList) for(const it of dd.secs){ if(it===selfItem) continue
+        const q=it.pts
+        for(let k=0;k+1<q.length;k++){ const c=q[k], d=q[k+1]
+          if(horiz && Math.abs(c.y-d.y)<0.5 && Math.abs(c.y-a.y)<6){ const lo=Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x)), hi=Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x)); if(hi-lo>10) return true }
+          if(!horiz && Math.abs(c.x-d.x)<0.5 && Math.abs(c.x-a.x)<6){ const lo=Math.max(Math.min(a.y,b.y),Math.min(c.y,d.y)), hi=Math.min(Math.max(a.y,b.y),Math.max(c.y,d.y)); if(hi-lo>10) return true }
+        }
+      }
+      return false
+    }
+    // 標籤一律為硬障礙(含本邊自己的): ELK 邊標籤是「先佔位、路徑繞標籤走」, 原路的 jog 即標籤讓位,
+    // 拉直會從自家標籤正中穿過(且「脫離才還原」守門對「穿過=距離變近」無感), 故不可豁免自家標籤
+    function segClear(a,b,selfItem){
+      for(const ob of obstacles) if(segHitsBox(a,b,ob)) return false
+      for(const lb of labelBoxes) if(segHitsBox(a,b,lb)) return false
+      return !segOverlapsOther(a,b,selfItem)
+    }
+    function mergeColl(p){   // 去重合點 + 併共線(含同線折返, 折返僅由化簡產生)
+      for(let i=p.length-2;i>=0;i--) if(Math.abs(p[i].x-p[i+1].x)<0.5 && Math.abs(p[i].y-p[i+1].y)<0.5) p.splice(i,1)
+      for(let i=p.length-2;i>=1;i--){ const A=p[i-1],B=p[i],C=p[i+1]
+        if((Math.abs(A.x-B.x)<0.5 && Math.abs(B.x-C.x)<0.5) || (Math.abs(A.y-B.y)<0.5 && Math.abs(B.y-C.y)<0.5)) p.splice(i,1) }
+    }
+    function distToPoly(pt,p){ let d=Infinity
+      for(let i=0;i+1<p.length;i++){ const a=p[i], b=p[i+1]
+        const len2=Math.max(1,(b.x-a.x)*(b.x-a.x)+(b.y-a.y)*(b.y-a.y))
+        const t=Math.max(0,Math.min(1, ((pt.x-a.x)*(b.x-a.x)+(pt.y-a.y)*(b.y-a.y))/len2 ))
+        const qx=a.x+t*(b.x-a.x), qy=a.y+t*(b.y-a.y); d=Math.min(d, Math.hypot(pt.x-qx, pt.y-qy)) }
+      return d
+    }
+    function simplifyOrtho(item, labels){
+      const p=item.pts
+      const before=p.map(q=>({x:q.x,y:q.y}))
+      mergeColl(p)
+      for(let pass=0; pass<20; pass++){
+        let changed=false
+        for(let i=0;i+3<p.length;i++){
+          const isStart=(i===0), isEnd=(i+3===p.length-1)
+          if(isStart && isEnd) continue   // 4 點路徑已極簡, 兩端軸向無法同時保持
+          const A=p[i], B=p[i+1], C=p[i+2], D=p[i+3]
+          const s1h=Math.abs(A.y-B.y)<0.5
+          // 取代點取窗之一角: 一般保持首段軸向; 末端窗改保持末段軸向(箭頭進入方向不可變)
+          const P = isEnd ? (s1h ? {x:A.x,y:D.y} : {x:D.x,y:A.y}) : (s1h ? {x:D.x,y:A.y} : {x:A.x,y:D.y})
+          if(isStart){ const sg0=s1h?Math.sign(B.x-A.x):Math.sign(B.y-A.y), sgN=s1h?Math.sign(P.x-A.x):Math.sign(P.y-A.y); if(sgN!==sg0) continue }
+          if(isEnd){ const s3h=Math.abs(C.y-D.y)<0.5, sg0=s3h?Math.sign(D.x-C.x):Math.sign(D.y-C.y), sgN=s3h?Math.sign(D.x-P.x):Math.sign(D.y-P.y); if(sgN!==sg0) continue }
+          if(!segClear(A,P,item) || !segClear(P,D,item)) continue
+          p.splice(i+1, 2, P)
+          mergeColl(p)
+          changed=true
+          break
+        }
+        if(!changed) break
+      }
+      // 標籤守門: 化簡若令本邊任一標籤脫離路徑(距離顯著變大), 整段還原
+      if(labels.length && p.length !== before.length){
+        for(const l of labels){
+          if(distToPoly(l,p) > distToPoly(l,before)+2){ p.length=0; before.forEach(q=>p.push(q)); return }
+        }
+      }
+    }
+    drawList.forEach(dd=>{
+      const labs=(dd.e.labels||[]).filter(l=>l.text).map(l=>({ x:dd.o.ox+(l.x||0)+(l.width||40)/2, y:dd.o.oy+(l.y||0)+(l.height||18)/2 }))
+      dd.secs.forEach(item=>{ if(item.pts.length>=5) simplifyOrtho(item, labs) })
+    })
+    // 2b) 依側別規則貼齊並繪製
+    const procSegsById={}   // 實際繪製之路徑點(含菱形貼齊與 ensureStub), 供 geom 輸出一致
+    drawList.forEach(dd=>{
+      const o=dd.o, e=dd.e
+      dd.secs.forEach(item=>{
+        const pts=item.pts
+        if(item.srcSide && pts.length >= 2) routeOutFromVertex(pts, item.srcSide)   // R1: 出永遠自該側頂點
+        if(item.tgtSide && pts.length >= 2){
+          // R2: 純進側匯「頂點」; 混合側依「半側」匯「斜邊中點」(進出不同點)
+          const m=sideMix[dd.se.to+'|'+item.tgtSide.ax+item.tgtSide.sg]
+          const anchor=diamondInAnchor(dd.tgtBox, item.tgtSide, !!(m && m.out > 0), pts[pts.length-1])
+          routeInToAnchor(pts, item.tgtSide, anchor)
+        }
+        // 分岔/匯入重排後清除共線折返: 頂點分岔之「接回原路第一轉折層」若跨過下一轉點, 會多走再折回疊出短勾, 併共線即塌縮為直接連線
+        if(item.srcSide || item.tgtSide) mergeColl(pts)
+        ensureStub(pts, 18, !!item.srcSide)
+        ;(procSegsById[e.id]=procSegsById[e.id]||[]).push(pts)
         let d='M '+pts[0].x+' '+pts[0].y; for(let i=1;i<pts.length;i++) d+=' L '+pts[i].x+' '+pts[i].y
         const dash = (e.id && spec.edges.find(x=>x.id===e.id) && spec.edges.find(x=>x.id===e.id).dashed) ? ' stroke-dasharray="6 4"' : ''
         svg+='<path d="'+d+'" fill="none" stroke="'+EDGE_LINE+'" stroke-width="2"'+dash+'/>'
@@ -172,7 +368,8 @@ window.renderFig = async function(spec){
       ;(e.labels||[]).forEach(l=>{ if(!l.text) return; const lx=o.ox+(l.x||0), ly=o.oy+(l.y||0), lw=l.width||40, lh=l.height||18
         svg+='<foreignObject x="'+lx+'" y="'+ly+'" width="'+(lw+6)+'" height="'+(lh+4)+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="font-size:'+EFS+'px;color:'+EDGE_TEXT+';text-shadow:0 0 3px '+HALO+',0 0 3px '+HALO+',0 0 3px '+HALO+',0 0 3px '+HALO+';white-space:nowrap">'+esc(l.text)+'</div></foreignObject>' })
     })
-    // 3) 節點(最上)
+    // 3) 節點(最上)。各文字 div 之斷行 CSS(overflow-wrap:break-word + word-break:normal)須與 measure()/measureItems() 一致,
+    //    否則長英文識別字量測時折行、渲染時不折 → 單行溢出 foreignObject 被裁切
     nodesOut.forEach(o=>{
       const n=o.n
       if(n.items && n.items.length){ // 標題+項目框: 依序分層(框背景→標題背景→框線→分隔線→標題→items), 使框線置頂不被標題背景遮蔽、線寬完整
@@ -182,14 +379,14 @@ window.renderFig = async function(spec){
         svg+='<path d="M '+(o.x+r)+' '+o.y+' H '+(o.x+o.w-r)+' A '+r+' '+r+' 0 0 1 '+(o.x+o.w)+' '+(o.y+r)+' V '+sep+' H '+o.x+' V '+(o.y+r)+' A '+r+' '+r+' 0 0 1 '+(o.x+r)+' '+o.y+' Z" fill="'+mix(n.fill,n.stroke,0.16)+'"/>'  // 2 標題背景(上圓角下平)
         svg+='<rect x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'" rx="'+r+'" fill="none" stroke="'+n.stroke+'" stroke-width="1.6"/>'  // 3 框線(頂層)
         svg+='<line x1="'+o.x+'" y1="'+sep+'" x2="'+(o.x+o.w)+'" y2="'+sep+'" stroke="'+n.stroke+'" stroke-width="1"/>'  // 4 分隔線
-        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+headH+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:bold;font-size:'+FS+'px;color:'+n.font+'">'+esc(n.title||n.label)+'</div></foreignObject>'  // 5 標題文字
+        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+headH+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:bold;font-size:'+FS+'px;color:'+n.font+'"><div style="width:100%;min-width:0;overflow-wrap:break-word;word-break:normal">'+esc(n.title||n.label)+'</div></div></foreignObject>'  // 5 標題文字
         svg+='<foreignObject x="'+o.x+'" y="'+sep+'" width="'+o.w+'" height="'+(o.h-headH)+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="font-size:'+(FS-1)+'px;line-height:1.55;padding:6px 9px 4px;text-align:left;color:'+n.font+'">'+lis+'</div></foreignObject>'  // 6 items文字
       } else if(n.diamond){ const cx=o.x+o.w/2, cy=o.y+o.h/2
         svg+='<polygon points="'+cx+','+o.y+' '+(o.x+o.w)+','+cy+' '+cx+','+(o.y+o.h)+' '+o.x+','+cy+'" fill="'+n.fill+'" stroke="'+n.stroke+'" stroke-width="1.8"/>'
-        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:'+FS+'px;color:'+n.font+';line-height:1.4;padding:0 4px;box-sizing:border-box">'+esc(n.label)+'</div></foreignObject>'
+        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:'+FS+'px;color:'+n.font+';line-height:1.4;padding:0 4px;box-sizing:border-box"><div style="width:100%;min-width:0;overflow-wrap:break-word;word-break:normal">'+esc(n.label)+'</div></div></foreignObject>'
       } else {
         svg+='<rect x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'" rx="7" fill="'+n.fill+'" stroke="'+n.stroke+'" stroke-width="1.6"/>'
-        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:'+FS+'px;color:'+n.font+';line-height:1.4;padding:0 4px;box-sizing:border-box">'+esc(n.label)+'</div></foreignObject>'
+        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:'+FS+'px;color:'+n.font+';line-height:1.4;padding:0 4px;box-sizing:border-box"><div style="width:100%;min-width:0;overflow-wrap:break-word;word-break:normal">'+esc(n.label)+'</div></div></foreignObject>'
       }
     })
 
@@ -200,7 +397,7 @@ window.renderFig = async function(spec){
       W:W+PAD*2, H:H+PAD*2,
       nodes: nodesOut.map(o=>({ id:o.n.id, x:o.x, y:o.y, w:o.w, h:o.h, parent:o.n.parent||null, kind:(o.n.items&&o.n.items.length)?'items':(o.n.diamond?'diamond':'box'), headH:(size[o.n.id]&&size[o.n.id].headH)||null })),
       groups: groupsOut.map(o=>({ id:o.g.id, x:o.x, y:o.y, w:o.w, h:o.h, depth:o.depth, parent:o.g.parent||null, labelW:(o.lbl&&o.lbl.width)||0 })),
-      edges: edgesOut.map(o=>({ id:o.e.id, segs:(o.e.sections||[]).map(sec=>[sec.startPoint].concat(sec.bendPoints||[]).concat([sec.endPoint]).map(p=>({x:o.ox+p.x,y:o.oy+p.y}))) }))
+      edges: edgesOut.map(o=>({ id:o.e.id, segs: procSegsById[o.e.id]||[] }))
     }
     return { ok:true, w:W+PAD*2, h:H+PAD*2, geom }
   } catch(e){ return { ok:false, err:String(e&&(e.stack||e.message)||e).slice(0,400) } }
@@ -208,8 +405,8 @@ window.renderFig = async function(spec){
 window.__ready = true
 </script></body></html>`
 
-// 單張渲染 → PNG Buffer(供 WFlowchart 統一入口呼叫; 自帶瀏覽器生命週期)
-export async function genPng(data, opt = {}) {
+// 渲染單張至就緒頁面(renderFig 完成 + 字型就緒); caller 負責 close browser
+async function renderFigPage(data) {
     const browser = await chromium.launch()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
@@ -220,7 +417,30 @@ export async function genPng(data, opt = {}) {
         if (!res.ok) throw new Error('p10 render failed: ' + res.err)
         await page.evaluate(() => document.fonts && document.fonts.ready)
         await page.waitForTimeout(150)
+        return { browser, page }
+    }
+    catch (err) {
+        await browser.close()
+        throw err
+    }
+}
+
+// 單張渲染 → PNG Buffer(供 WFlowchart 統一入口呼叫; 自帶瀏覽器生命週期)
+export async function genPng(data, opt = {}) {
+    const { browser, page } = await renderFigPage(data)
+    try {
         return await page.locator('#stage svg').screenshot()
+    }
+    finally {
+        await browser.close()
+    }
+}
+
+// 單張渲染 → SVG 字串(本產線自組之 SVG; &nbsp; 正規化為 &#160; 使其為合法 standalone SVG)
+export async function genSvg(data, opt = {}) {
+    const { browser, page } = await renderFigPage(data)
+    try {
+        return (await page.evaluate(() => document.getElementById('stage').innerHTML)).replace(/&nbsp;/g, '&#160;').trim()
     }
     finally {
         await browser.close()

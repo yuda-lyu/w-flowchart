@@ -394,8 +394,9 @@ window.renderFig = function(fig){ return new Promise(function(resolve){
 window.__ready = true
 </script></body></html>`
 
-// 對外: 單張正規化數據(同 FIGURES[n].data 結構) → PNG Buffer。重用上方 translate/HTML/渲染管線, 自行開關 browser, 不寫檔。
-export async function genPng(data, opt = {}) {
+// 內部 helper: 開 browser → 灌入 html → 等待 LF 就緒 → renderFig(data) 畫出圖面, 回傳 { browser, page }(呼叫端負責 close)。
+//   失敗時(含 renderFig 回報 !ok)於此處關閉 browser 後 rethrow, 呼叫端不需重複收拾。
+async function renderToReadyPage(data) {
     const browser = await chromium.launch()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
@@ -409,7 +410,45 @@ export async function genPng(data, opt = {}) {
         const res = await page.evaluate((fig) => window.renderFig(fig), fig)
         if (!res.ok) throw new Error(res.err || 'renderFig failed')
         await page.evaluate(() => document.fonts && document.fonts.ready)
+        return { browser, page, res }
+    } catch (e) {
+        await browser.close()
+        throw e
+    }
+}
+
+// 對外: 單張正規化數據(同 FIGURES[n].data 結構) → PNG Buffer。重用上方 translate/HTML/渲染管線, 自行開關 browser, 不寫檔。
+export async function genPng(data, opt = {}) {
+    const { browser, page } = await renderToReadyPage(data)
+    try {
         return await page.locator('#app').screenshot()
+    } finally {
+        await browser.close()
+    }
+}
+
+// 對外: 單張正規化數據 → 忠實且 standalone 的 SVG 字串。
+//   #app 內實際有 3 個 svg(canvas-overlay 圖面本體 / modification-overlay 選取輔助層(無內容)/ lf-grid 背景格線(display:none)),
+//   真正含 .lf-node/.lf-edge 圖元的是 svg.lf-canvas-overlay, 序列化取此元素即可(transform 為單位矩陣, 座標已是絕對像素)。
+//   節點/邊樣式多為行內屬性(fill/stroke/font-family...皆已內聯), 但文字自動換行採 foreignObject 內嵌 HTML div,
+//   其置中(flex)/字重/寬度等版面由 LOGICFLOW_CSS 之 .lf-node-text-auto-wrap(-content) class 決定, 故仍需嵌入該 CSS 才能忠實呈現。
+export async function genSvg(data, opt = {}) {
+    const { browser, page, res } = await renderToReadyPage(data)
+    try {
+        let svg = await page.evaluate(() => document.querySelector('svg.lf-canvas-overlay').outerHTML)
+        const openTagMatch = svg.match(/^<svg[^>]*>/)
+        if (!openTagMatch) throw new Error('genSvg: 找不到圖面 svg 根元素')
+        let openTag = openTagMatch[0]
+            .replace('width="100%"', `width="${res.w}"`)
+            .replace('height="100%"', `height="${res.h}"`)
+        openTag = openTag.replace(/>$/, ` viewBox="0 0 ${res.w} ${res.h}">`)
+        svg = openTag + svg.slice(openTagMatch[0].length)
+        // 嵌入 CSS(LOGICFLOW_CSS + 頁內字型規則) + 白底(比照 #app 背景), 使脫離頁面仍忠實呈現
+        const inject = `<style>${LOGICFLOW_CSS}\n* { font-family: ${FONT}; }</style>`
+            + `<rect x="0" y="0" width="${res.w}" height="${res.h}" fill="#fff"></rect>`
+        svg = svg.replace('<g transform', inject + '<g transform')
+        svg = svg.replace(/&nbsp;/g, '&#160;')
+        return svg
     } finally {
         await browser.close()
     }

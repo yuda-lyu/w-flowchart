@@ -1,0 +1,111 @@
+{
+  "dir": "TB",
+  "nodes": [
+    {
+      "id": "G1",
+      "label": "使用者模組",
+      "cls": "blueG"
+    },
+    {
+      "id": "G2",
+      "label": "訂單模組",
+      "cls": "greenG"
+    },
+    {
+      "id": "G3",
+      "label": "共用模組",
+      "cls": "orangeG"
+    },
+    {
+      "id": "g1a",
+      "title": "帳號管理",
+      "items": [
+        "註冊",
+        "登入",
+        "密碼重設",
+        "權限設定"
+      ],
+      "cls": "blue",
+      "group": "G1"
+    },
+    {
+      "id": "g1b",
+      "title": "個人資料",
+      "items": [
+        "基本資料",
+        "收件地址",
+        "偏好設定"
+      ],
+      "cls": "blue",
+      "group": "G1"
+    },
+    {
+      "id": "g2a",
+      "title": "訂單處理",
+      "items": [
+        "建立訂單",
+        "訂單查詢",
+        "訂單取消",
+        "訂單狀態"
+      ],
+      "cls": "green",
+      "group": "G2"
+    },
+    {
+      "id": "g2b",
+      "title": "金流處理",
+      "items": [
+        "付款",
+        "退款",
+        "發票開立"
+      ],
+      "cls": "green",
+      "group": "G2"
+    },
+    {
+      "id": "g3a",
+      "title": "訊息通知",
+      "items": [
+        "站內信",
+        "電子郵件",
+        "簡訊"
+      ],
+      "cls": "orange",
+      "group": "G3"
+    },
+    {
+      "id": "g3b",
+      "title": "紀錄稽核",
+      "items": [
+        "操作紀錄",
+        "錯誤紀錄"
+      ],
+      "cls": "orange",
+      "group": "G3"
+    }
+  ],
+  "edges": [
+    {
+      "from": "G1",
+      "to": "G3",
+      "label": "呼叫共用"
+    },
+    {
+      "from": "G2",
+      "to": "G3",
+      "label": "觸發通知"
+    },
+    {
+      "from": "g2a",
+      "to": "g3a",
+      "label": "訂單通知",
+      "kind": "dashed"
+    },
+    {
+      "from": "g1a",
+      "to": "g3b",
+      "label": "登入紀錄",
+      "kind": "dashed"
+    }
+  ]
+}

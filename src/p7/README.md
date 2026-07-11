@@ -7,7 +7,7 @@
 - **渲染方式**：排版完成後以 `P.fitToContent({ padding: 28, allowNewOrigin: 'any', useModelGeometry: true })` 讓 JointJS Paper 自適應內容邊界，截圖目標為 `#paper svg`（`page.$('#paper svg').screenshot()`），直接輸出 PNG。
 - **解析度**：`browser.newPage({ deviceScaleFactor: 2 })` 以 2 倍像素密度開頁，截出的 PNG 實際像素為邏輯尺寸的兩倍，保有高清品質。
 - **字型**：頁內使用 `Microsoft JhengHei`（微軟正黑體）作為主字型，canvas 量測與 JointJS 渲染均使用同一 `FONT` 字串，確保量測結果與渲染結果一致。
-- **調用方式**：本模組僅匯出 `genPng(data, opt) → Promise<Buffer>`，輸入為正規化繪圖數據 `{ dir, nodes, edges }`，回傳 PNG 之 Node Buffer；由 `src/WFlowchart.mjs` 統一匯入並依 `p7` 鍵值調用，本身不寫檔、不涉及批次流程。
+- **調用方式**：本模組匯出 `genPng(data, opt) → Promise<Buffer>` 與 `genSvg(data, opt) → Promise<string>`，輸入皆為正規化繪圖數據 `{ dir, nodes, edges }`；`genPng` 回傳 PNG 之 Node Buffer，`genSvg` 取 `#paper svg` 之 DOM 序列化結果並修正為 standalone SVG（補 `xmlns`、`width`/`height` 由 `100%` 改為 `fitToContent` 後之實際像素值、移除依賴容器定位之 `position:absolute;inset:0`）；由 `src/WFlowchart.mjs` 統一匯入並依 `p7` 鍵值調用，本身不寫檔、不涉及批次流程。
 
 ## 產製原理（資料驅動）
 

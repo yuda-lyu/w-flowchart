@@ -8,7 +8,7 @@
 - **截圖目標**：對 `#shot` 元素截圖（`page.locator('#shot').screenshot()`）；`#shot` 為 `display:inline-block` 的 div，內含 `#stage`（React Flow 掛載點），外加 `padding:24px` 白邊，截出的 PNG 即為完整含留白之圖片。
 - **解析度**：`browser.newPage({ deviceScaleFactor: 2 })` 開啟 2x 縮放，所有量測與佈局座標仍以 CSS px 計算，截出的 PNG 實際像素為畫布尺寸之 2 倍，確保中文字型清晰。
 - **字型**：`Microsoft JhengHei, sans-serif`，中文主字型一致貫穿節點、標籤、邊標籤。
-- **呼叫入口**：`export async function genPng(data, opt = {})` 為唯一對外介面，回傳 `Promise<Buffer>`（PNG）；由 `src/WFlowchart.mjs` 之 `GENS.p9` 統一調用（`mode: 'p9'`）。`data` 為正規化繪圖數據 `{ dir, nodes, edges }`；`opt` 保留擴充，目前原樣接收但未使用。
+- **呼叫入口**：`export async function genPng(data, opt = {})` 為唯一對外介面，回傳 `Promise<Buffer>`（PNG）；由 `src/WFlowchart.mjs` 之 `GENS.p9` 統一調用（`mode: 'p9'`）。`data` 為正規化繪圖數據 `{ dir, nodes, edges }`；`opt` 保留擴充，目前原樣接收但未使用。**不支援 SVG 輸出**（本產線節點為 React Flow 之 HTML div，非純 SVG，無法序列化為 standalone SVG）。
 
 ## 產製原理（資料驅動）
 

@@ -360,9 +360,9 @@ window.renderFig = renderFig
 window.__ready = true
 </script></body></html>`
 
-// genPng(data, opt) — 單張渲染:輸入正規化繪圖數據({dir,nodes,edges}, caller 已先做 label 衍生),
-//   重用上方 translate/HTML/渲染管線, 回傳 PNG 之 Node Buffer(caller 自行決定寫檔或其他用途)。
-export async function genPng(data, opt = {}) {
+// 渲染單張至就緒頁面(#paper svg 已完成排版渲染), 回傳 {browser,page,res}(res 含 fitToContent 後之 w/h);
+//   caller 負責 close browser。渲染失敗(res.ok=false)或例外時, 先 close browser 再 rethrow。
+async function renderFigPage(data) {
     const browser = await chromium.launch()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
@@ -378,8 +378,47 @@ export async function genPng(data, opt = {}) {
         const { els, rankDir } = translate(data)
         const res = await page.evaluate(([e, rd, s]) => window.renderFig(e, rd, s), [els, rankDir, SEP])
         if (!res.ok) throw new Error(res.err + (res.stack ? '\n' + res.stack : ''))
+        return { browser, page, res }
+    }
+    catch (err) {
+        await browser.close()
+        throw err
+    }
+}
+
+// genPng(data, opt) — 單張渲染:輸入正規化繪圖數據({dir,nodes,edges}, caller 已先做 label 衍生),
+//   重用上方 translate/HTML/渲染管線, 回傳 PNG 之 Node Buffer(caller 自行決定寫檔或其他用途)。
+export async function genPng(data, opt = {}) {
+    const { browser, page } = await renderFigPage(data)
+    try {
         const el = await page.$('#paper svg')
         return await el.screenshot()
+    } finally {
+        await browser.close()
+    }
+}
+
+// genSvg(data, opt) — 單張渲染 → standalone SVG 字串:
+//   取 #paper svg 之 outerHTML, 修正使其脫離 #paper 容器後仍忠實:
+//     1. 補 xmlns(JointJS 只寫 xmlns:xlink, 缺 xmlns 非合法 standalone SVG)
+//     2. width/height 由 JointJS 寫死的 "100%" 改為 fitToContent 後之實際像素值(res.w/res.h)
+//        (100% 依賴 #paper 容器之 inline width/height, 脫離容器後無父層可依附)
+//     3. 移除 position:absolute;inset:0(同上, 依賴容器定位, standalone 時會撐滿最近定位祖先/viewport)
+//   svg 內已含 JointJS 自身注入之 <style>(non-scaling-stroke), outerHTML 序列化時隨之保留, 無需另行處理。
+//   &nbsp; 正規化為 &#160; 使其為合法 XML。
+export async function genSvg(data, opt = {}) {
+    const { browser, page, res } = await renderFigPage(data)
+    try {
+        let outer = await page.$eval('#paper svg', el => el.outerHTML)
+        outer = outer.replace(/^<svg([^>]*)>/, (m0, attrs) => {
+            let a = attrs
+            if (!/\bxmlns=/.test(a)) a = ' xmlns="http://www.w3.org/2000/svg"' + a
+            a = a.replace(/\swidth="100%"/, ` width="${res.w}"`)
+            a = a.replace(/\sheight="100%"/, ` height="${res.h}"`)
+            a = a.replace(/position:\s*absolute;\s*inset:\s*[^;]*;\s*/, '')
+            return `<svg${a}>`
+        })
+        return outer.replace(/&nbsp;/g, '&#160;').trim()
     } finally {
         await browser.close()
     }

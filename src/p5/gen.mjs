@@ -68,27 +68,27 @@ function styLines(cls, isGroup) {
 
 // ── 取節點在 D2 中的完整路徑(用於邊的 from/to 引用) ────────────────────────
 // D2 巢狀容器中子節點須以 "父.子" 表示；遞迴向上追溯直到頂層。
-function qualifiedId(nodeId, parentMap) {
+function qualifiedId(nodeId, parentMap, qid) {
     const parts = []
     let cur = nodeId
     while (cur) {
         parts.unshift(cur)
         cur = parentMap[cur]
     }
-    return parts.join('.')
+    return parts.map(qid).join('.')
 }
 
 // ── 遞迴產生 D2 區塊：容器（群組）巢狀展開 ────────────────────────────────────
 // childrenMap: parentId → [node, ...]
 // parentMap: nodeId → parentId | undefined
-function renderNode(nd, childrenMap, parentMap, dataDir, indent) {
+function renderNode(nd, childrenMap, parentMap, dataDir, indent, qid) {
     const pad = ' '.repeat(indent)
     const isGroup = isGroupCls(nd.cls)
     const lines = []
 
     if (isGroup) {
         // 群組容器：開 block，在內部設 direction + style，再遞迴展開子節點
-        lines.push(`${pad}${nd.id}: "${esc(nd.label)}" {`)
+        lines.push(`${pad}${qid(nd.id)}: "${esc(nd.label)}" {`)
         // 若群組本身有子節點，為其設定方向（延用圖的頂層方向）
         const kids = childrenMap[nd.id] || []
         if (kids.length > 0) {
@@ -98,12 +98,12 @@ function renderNode(nd, childrenMap, parentMap, dataDir, indent) {
             lines.push(`${pad}${sl}`)
         }
         for (const kid of kids) {
-            lines.push(renderNode(kid, childrenMap, parentMap, dataDir, indent + 2))
+            lines.push(renderNode(kid, childrenMap, parentMap, dataDir, indent + 2, qid))
         }
         lines.push(`${pad}}`)
     } else {
         // 一般節點（含 diamond）
-        lines.push(`${pad}${nd.id}: "${esc(nd.label)}" {`)
+        lines.push(`${pad}${qid(nd.id)}: "${esc(nd.label)}" {`)
         for (const sl of styLines(nd.cls, false)) {
             lines.push(`${pad}${sl}`)
         }
@@ -116,6 +116,20 @@ function renderNode(nd, childrenMap, parentMap, dataDir, indent) {
 // ── translate：標準數據 → D2 DSL 字串 ─────────────────────────────────────────
 // 邊一律在頂層宣告，跨群組時用完整路徑（parent.child）讓 D2 正確解析。
 function translate(data) {
+    // D2 保留字(top/left/right/bottom/style/label/shape/near/width/height 等)不可作識別子 → id 一律加前綴消歧
+    //   僅影響 DSL 內部識別(顯示文字仍用 label); 不同原 id 淨化後若同名, 以序號區隔避免節點被合併
+    const used = new Set()
+    const qidMap = {}
+    const qid = (id) => {
+        if (qidMap[id]) return qidMap[id]
+        const base = 'n_' + String(id).replace(/[^A-Za-z0-9_]/g, '_')
+        let q = base, k = 2
+        while (used.has(q)) q = base + '_' + (k++)
+        used.add(q)
+        qidMap[id] = q
+        return q
+    }
+
     // 建立 parentMap（nodeId → parentId） 與 childrenMap（parentId → [node]）
     const parentMap = {}
     const childrenMap = {}
@@ -137,13 +151,13 @@ function translate(data) {
 
     // 頂層節點（含群組容器）
     for (const nd of topNodes) {
-        blocks.push(renderNode(nd, childrenMap, parentMap, data.dir, 0))
+        blocks.push(renderNode(nd, childrenMap, parentMap, data.dir, 0, qid))
     }
 
     // 邊：全部在頂層，跨層路徑用 qualifiedId 展開
     for (const ed of data.edges) {
-        const src = qualifiedId(ed.from, parentMap)
-        const dst = qualifiedId(ed.to, parentMap)
+        const src = qualifiedId(ed.from, parentMap, qid)
+        const dst = qualifiedId(ed.to, parentMap, qid)
         let s = `${src} -> ${dst}`
         if (ed.label) s += `: "${esc(ed.label)}"`
         if (ed.kind === 'dashed') s += ` { style.stroke-dash: 4 }`
@@ -157,11 +171,11 @@ function translate(data) {
 // pad=40 與 themeID=0 為通用常數，對所有 9 張圖一致；無逐圖數值。
 const baseOpt = { layout: 'dagre', pad: 40, themeID: 0 }
 
-// ── 單張渲染：正規化繪圖數據 → PNG Buffer ─────────────────────────────────────
+// ── 單張渲染核心：正規化繪圖數據 → 後處理完成之 SVG 字串 ──────────────────────
 // data 結構同 FIGURES[n].data（{ dir, nodes, edges }），caller 須先做 label 衍生。
 // D2 建構時即起常駐 worker 且無公開關閉 API（worker 為 node worker_threads 實例），
 // 若掛在模組層, 光 import 本檔就會令 caller 程序無法自然結束；故逐次建立並於 finally terminate。
-export async function genPng(data, opt = {}) {
+async function d2Svg(data) {
     const d2inst = new D2()
     try {
         const d2src = translate(data)
@@ -169,14 +183,25 @@ export async function genPng(data, opt = {}) {
         let svg = await d2inst.render(res.diagram, res.renderOptions)
         svg = injectEdgeLabelHalo(svg)
         svg = injectFont(svg)
-        // density 通用公式：依 SVG viewBox 寬推算，讓輸出寬約落在 1600–2200px
-        const m = svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/)
-        const w = m ? parseFloat(m[1]) : 1000
-        const density = 96 * Math.min(2.4, Math.max(1.4, 1700 / w))
-        return await sharp(Buffer.from(svg), { density }).png().toBuffer()
+        return svg
     }
     finally {
         await d2inst.ready.catch(() => {})
         if (d2inst.worker && d2inst.worker.terminate) await d2inst.worker.terminate()
     }
+}
+
+// ── 單張渲染 → PNG Buffer ────────────────────────────────────────────────────
+export async function genPng(data, opt = {}) {
+    const svg = await d2Svg(data)
+    // density 通用公式：依 SVG viewBox 寬推算，讓輸出寬約落在 1600–2200px
+    const m = svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/)
+    const w = m ? parseFloat(m[1]) : 1000
+    const density = 96 * Math.min(2.4, Math.max(1.4, 1700 / w))
+    return await sharp(Buffer.from(svg), { density }).png().toBuffer()
+}
+
+// ── 單張渲染 → SVG 字串（D2 引擎原生輸出 + 光暈/字型後處理） ───────────────────
+export async function genSvg(data, opt = {}) {
+    return await d2Svg(data)
 }

@@ -16,6 +16,10 @@ import { pkgScript } from '../common/pkg.mjs'
 
 // G6 v5 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
 const G6_JS = pkgScript('@antv/g6/dist/g6.min.js')
+// genSvg 專用:@antv/g-svg renderer(取代預設 canvas renderer, 產出 SVG DOM)。
+//   依賴 @antv/g-lite UMD(暴露全域 window.G)須先於 g-svg UMD 載入(g-svg UMD 讀取既有 window.G 掛載 window.G.SVG)。
+const G_LITE_JS = pkgScript('@antv/g-lite/dist/index.umd.min.js')
+const G_SVG_JS = pkgScript('@antv/g-svg/dist/index.umd.min.js')
 
 // ===== 通用排版常數(全圖共用, 無逐圖客製) =====
 const CANVAS = 2200          // 大畫布:給足夠空間, 配合 autoFit:'view' 自動縮放, 不逐圖設 w/h
@@ -52,15 +56,22 @@ function translate(data) {
     const nodes = []
     const combos = []
     // G6 v5 不接受以 combo id 當邊端點; 建「容器 → 代表葉節點」對照, 將指向容器的邊改接其代表成員。
-    //   通用化舊版「層級邊改走成員節點(fe1→if1)」的手法:取各容器第一個直屬葉節點為代表, 不逐圖寫死成員 id。
+    //   通用化舊版「層級邊改走成員節點(fe1→if1)」的手法:取容器內數據序第一個「可達」葉節點為代表;
+    //   容器內可能只有子容器(深巢狀), 故須遞迴下鑽, 不能只看直屬成員。
     const comboIds = new Set(data.nodes.filter(nd => isGroupCls(nd.cls)).map(nd => nd.id))
-    const kpRepByCombo = {}
+    const childrenOf = {}
     for (const nd of data.nodes) {
-        if (nd.group && comboIds.has(nd.group) && !isGroupCls(nd.cls) && !(nd.group in kpRepByCombo)) {
-            kpRepByCombo[nd.group] = nd.id
-        }
+        if (nd.group) (childrenOf[nd.group] = childrenOf[nd.group] || []).push(nd)
     }
-    const resolveEnd = (id) => (comboIds.has(id) && kpRepByCombo[id]) ? kpRepByCombo[id] : id
+    const firstLeaf = (cid) => {
+        for (const ch of (childrenOf[cid] || [])) {
+            if (!isGroupCls(ch.cls)) return ch.id
+            const r = firstLeaf(ch.id)
+            if (r) return r
+        }
+        return null
+    }
+    const resolveEnd = (id) => (comboIds.has(id) && firstLeaf(id)) || id
     for (const nd of data.nodes) {
         const c = colorOf(nd.cls)
         if (isGroupCls(nd.cls)) {
@@ -180,6 +191,98 @@ export async function genPng(data, opt = {}) {
         const res = await page.evaluate(() => window.snap())
         if (!res.ok) throw new Error('snap failed :: ' + res.err)
         return Buffer.from(res.png.split(',')[1], 'base64')
+    } finally {
+        await browser.close()
+    }
+}
+
+// ===== genSvg 專用渲染外殼 =====
+//   與 genPng 完全獨立之頁面/renderer 流程(genPng 之 html/renderFig/snap 不受影響、行為不變)。
+//   換用 @antv/g-svg renderer(取代預設 canvas renderer)產出 SVG DOM, 其餘 translate/layout/樣式邏輯
+//   (dagre 排版、緊湊間距、z-order、字型)與 genPng 完全共用, 故版面結構/顏色/文字與 PNG 版一致。
+const htmlSvg = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<script>${G_LITE_JS}</script>
+<script>${G_SVG_JS}</script>
+<script>${G6_JS}</script>
+</head><body style="margin:0;background:#fff">
+<div id="g6" style="background:#fff"></div>
+<script>
+window.renderFigSvg = async function(g, rankdir, nodesep, ranksep, canvas, font, comboZ, edgeZ){
+  try {
+    const el = document.getElementById('g6')
+    el.style.width = canvas + 'px'; el.style.height = canvas + 'px'
+    if (window.__graph) { try { window.__graph.destroy() } catch(e){} }
+    const graph = new G6.Graph({
+      container: el, width: canvas, height: canvas, autoFit:'view',
+      renderer: () => new window.G.SVG.Renderer(),
+      data: { nodes: g.nodes, edges: g.edges, combos: g.combos },
+      layout: { type:'antv-dagre', rankdir: rankdir, nodesep: nodesep, ranksep: ranksep, sortByCombo: (g.combos && g.combos.length>0) },
+      combo: { type:'rect', style:{ zIndex: comboZ, padding:[30,18,18,18], labelPlacement:'top', labelFontFamily: font } },
+      edge: { type:'polyline', style:{ zIndex: edgeZ, lineWidth:2.2, endArrow:true, labelFontFamily: font } },
+      node: { style:{ labelFontFamily: font } },
+    })
+    window.__graph = graph
+    await graph.render()
+    await new Promise(r=>setTimeout(r,300))
+    return { ok:true }
+  } catch(e){ return { ok:false, err:String(e&&(e.stack||e.message)||e).slice(0,400) } }
+}
+// 取 main layer 之 SVG DOM(SVG renderer 下唯一承載節點/邊/combo 之 layer, background/label/transient 三層無內容),
+// 以 canvas.getBounds() 對齊 toDataURL({mode:'overall'}) 之緊裁切邊界改寫 viewBox/width/height, 補白底矩形。
+window.snapSvg = async function(){
+  try {
+    await new Promise(r=>setTimeout(r,200))
+    const canvas = window.__graph.getCanvas()
+    const bounds = canvas.getBounds()
+    const minX = bounds.min[0], minY = bounds.min[1]
+    const w = bounds.max[0] - minX, h = bounds.max[1] - minY
+    const mainEl = canvas.getLayer('main').getContextService().getDomElement()
+    const svg = mainEl.cloneNode(true)
+    // canvas.getBounds() 回傳世界座標(排版原始座標, 未經 camera 縮放平移); 但複製之 DOM 內容掛在
+    // #g-svg-camera 群組下, 帶有互動視圖之 camera transform(autoFit:'view' 縮放平移)。
+    // 兩者座標系不同, 混用會裁切錯位, 故先歸零 camera transform, 使內容回到與 bounds 相同之世界座標。
+    const cameraEl = svg.querySelector('#g-svg-camera')
+    if (cameraEl) cameraEl.removeAttribute('transform')
+    svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg')
+    svg.setAttribute('viewBox', minX + ' ' + minY + ' ' + w + ' ' + h)
+    svg.setAttribute('width', String(Math.ceil(w)))
+    svg.setAttribute('height', String(Math.ceil(h)))
+    svg.removeAttribute('tabindex')
+    svg.style.background = ''
+    svg.style.pointerEvents = ''
+    svg.style.gridArea = ''
+    svg.style.outline = ''
+    const bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect')
+    bgRect.setAttribute('x', String(minX)); bgRect.setAttribute('y', String(minY))
+    bgRect.setAttribute('width', String(w)); bgRect.setAttribute('height', String(h))
+    bgRect.setAttribute('fill', '#fff')
+    svg.insertBefore(bgRect, svg.firstChild)
+    const out = svg.outerHTML.replace(/&nbsp;/g, '&#160;')
+    return { ok:true, svg: out }
+  } catch(e){ return { ok:false, err:String(e&&(e.stack||e.message)||e).slice(0,400) } }
+}
+window.__readySvg=true
+</script></body></html>`
+
+// 單張渲染:同 genPng 之輸入(單份正規化繪圖數據), 回傳 SVG 字串(緊裁切範圍對齊 genPng 之 toDataURL overall)。
+//   獨立頁面/renderer 流程(見上), genPng 之 canvas 渲染行為不受影響。
+export async function genSvg(data, opt = {}) {
+    const browser = await chromium.launch()
+    try {
+        const page = await browser.newPage()
+        const errs = []
+        page.on('pageerror', e => errs.push(e.message))
+        page.on('console', m => { if (m.type() === 'error') errs.push('c:' + m.text()) })
+        await page.setContent(htmlSvg, { waitUntil: 'load' })
+        await page.waitForFunction(() => window.__readySvg, { timeout: 60000 }).catch(() => {})
+        await page.evaluate(() => document.fonts && document.fonts.ready)
+        const g = translate(data)
+        const r = await page.evaluate(([gg, rd, ns, rs, cv, ft, cz, ez]) => window.renderFigSvg(gg, rd, ns, rs, cv, ft, cz, ez),
+            [g, data.dir, NODESEP, RANKSEP, CANVAS, FONT, COMBO_Z, EDGE_Z])
+        if (!r.ok) throw new Error('renderFigSvg failed :: ' + String(r.err).split('\n')[0])
+        const res = await page.evaluate(() => window.snapSvg())
+        if (!res.ok) throw new Error('snapSvg failed :: ' + res.err)
+        return res.svg
     } finally {
         await browser.close()
     }

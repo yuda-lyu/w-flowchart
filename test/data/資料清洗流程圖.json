@@ -1,0 +1,28 @@
+{
+  "dir": "LR",
+  "nodes": [
+    { "id": "GRP", "label": "資料清洗流程", "cls": "blueG" },
+    { "id": "n1", "label": "原始資料匯入", "cls": "blue", "group": "GRP" },
+    { "id": "n2", "title": "格式偵測", "items": ["辨識編碼", "辨識分隔符"], "cls": "blue", "group": "GRP" },
+    { "id": "n3", "label": "欄位型別轉換", "cls": "green", "group": "GRP" },
+    { "id": "n4", "label": "移除重複紀錄", "cls": "green", "group": "GRP" },
+    { "id": "n5", "label": "空值補齊", "cls": "green", "group": "GRP" },
+    { "id": "n6", "label": "異常值偵測", "cls": "orange", "group": "GRP" },
+    { "id": "n7", "label": "呼叫外部驗證服務", "cls": "orange", "group": "GRP" },
+    { "id": "n8", "label": "重新嘗試連線", "cls": "red", "group": "GRP" },
+    { "id": "n9", "label": "彙整清洗結果", "cls": "purple", "group": "GRP" },
+    { "id": "end", "label": "輸出乾淨資料集", "cls": "done", "group": "GRP" }
+  ],
+  "edges": [
+    { "from": "n1", "to": "n2" },
+    { "from": "n2", "to": "n3" },
+    { "from": "n3", "to": "n4" },
+    { "from": "n4", "to": "n5" },
+    { "from": "n5", "to": "n6" },
+    { "from": "n6", "to": "n7" },
+    { "from": "n7", "to": "n8", "label": "連線逾時", "kind": "dashed" },
+    { "from": "n8", "to": "n7", "kind": "dashed" },
+    { "from": "n7", "to": "n9" },
+    { "from": "n9", "to": "end" }
+  ]
+}

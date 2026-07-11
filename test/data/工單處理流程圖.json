@@ -1,0 +1,43 @@
+{
+  "dir": "TB",
+  "nodes": [
+    { "id": "FRONT", "label": "前台受理", "cls": "blueG" },
+    { "id": "f1", "label": "客戶提出報修申請", "cls": "blue", "group": "FRONT" },
+    { "id": "f2", "label": "客服人員登錄工單", "cls": "blue", "group": "FRONT" },
+    { "id": "f6", "label": "確認聯絡方式與地址", "cls": "blue", "group": "FRONT" },
+    { "id": "d1", "label": "案件類型判斷", "cls": "diamond", "group": "FRONT" },
+    { "id": "f3", "label": "標記為一般排程", "cls": "green", "group": "FRONT" },
+    { "id": "f4", "label": "標記為優先處理", "cls": "orange", "group": "FRONT" },
+    { "id": "f4c", "label": "轉交專案小組評估", "cls": "orange", "group": "FRONT" },
+    { "id": "BACK", "label": "後台處理", "cls": "purpleG" },
+    { "id": "b1", "label": "派工人員指派", "cls": "purple", "group": "BACK" },
+    { "id": "b2", "label": "技術人員到場檢修", "cls": "purple", "group": "BACK" },
+    { "id": "d2", "label": "是否修復成功", "cls": "diamond", "group": "BACK" },
+    { "id": "b3", "label": "更換零件", "cls": "red", "group": "BACK" },
+    { "id": "b4", "label": "填寫維修報告", "cls": "green", "group": "BACK" },
+    { "id": "b6", "label": "拍照存證並歸檔", "cls": "green", "group": "BACK" },
+    { "id": "b5", "label": "回報前台結案", "cls": "green", "group": "BACK" },
+    { "id": "f5", "label": "通知客戶結案", "cls": "blue" },
+    { "id": "end", "label": "工單結案", "cls": "done" }
+  ],
+  "edges": [
+    { "from": "f1", "to": "f2" },
+    { "from": "f2", "to": "f6" },
+    { "from": "f6", "to": "d1" },
+    { "from": "d1", "to": "f3", "label": "一般" },
+    { "from": "d1", "to": "f4", "label": "緊急" },
+    { "from": "d1", "to": "f4c", "label": "特殊申訴" },
+    { "from": "f3", "to": "b1", "label": "派工" },
+    { "from": "f4", "to": "b1", "label": "派工" },
+    { "from": "f4c", "to": "b1", "label": "派工" },
+    { "from": "b1", "to": "b2" },
+    { "from": "b2", "to": "d2" },
+    { "from": "d2", "to": "b4", "label": "是" },
+    { "from": "d2", "to": "b3", "label": "否" },
+    { "from": "b3", "to": "b2", "kind": "dashed", "label": "退回重測" },
+    { "from": "b4", "to": "b6" },
+    { "from": "b6", "to": "b5" },
+    { "from": "b5", "to": "f5", "label": "結案回報" },
+    { "from": "f5", "to": "end" }
+  ]
+}

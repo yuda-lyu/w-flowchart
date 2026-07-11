@@ -3,7 +3,7 @@
 ## 技術核心
 
 - **繪圖庫**: mermaid 第 10 版系列（package.json 以 npm alias `mermaid10` 安裝，與 p2 之第 11 版系列並存），透過 `common/pkg.mjs` 的 `pkgScript('mermaid10/dist/mermaid.min.js')` 讀取本機 `node_modules` 內容並內聯注入 `<script>` 標籤，於 Playwright 開啟的 Chromium 頁面內執行；不經 CDN，斷網環境亦可運作。
-- **渲染方式**: `genFig()` 為每張圖建立獨立的 Playwright `page`（`browser.newPage()`），避免 mermaid 內部 render id 衝突。將 `mermaidHtml()` 產生的 HTML 字串以 `page.setContent()` 注入，等待 `document.title === 'DONE'` 確認渲染完成（或 `FAIL` 時拋出錯誤），再以 `page.waitForFunction` 超時 30 秒防呆。
+- **渲染方式**: 內部 `renderFigPage()` 為每次渲染建立獨立的 Playwright `page`（`browser.newPage()`），避免 mermaid 內部 render id 衝突。將 `mermaidHtml()` 產生的 HTML 字串以 `page.setContent()` 注入，等待 `document.title === 'DONE'` 確認渲染完成（或 `FAIL` 時拋出錯誤），再以 `page.waitForFunction` 超時 30 秒防呆。
 - **截圖目標**: `page.locator('#box svg').screenshot()`，只截 SVG 元素本身，不含外層 `div#box` 的 padding 背景。
 - **解析度**: `deviceScaleFactor: 4`，Chromium 以 4 倍畫素密度渲染 SVG 向量圖，輸出 PNG 清晰度極高，適合印刷品質報告。
 - **字型**: HTML `<body>` 及 mermaid `themeVariables.fontFamily` 均指定 `'微軟正黑體','Microsoft JhengHei',sans-serif`；截圖前以 `page.evaluate(() => document.fonts.ready)` 確保字型載入完成。
@@ -44,7 +44,7 @@
 
 ### 對外介面
 
-- 產線唯一輸出入口為 `genPng(data, opt)`，`data` 為正規化繪圖數據 `{ dir, nodes, edges }`，回傳 `Promise<Buffer>`（PNG）；`genPng` 自帶瀏覽器生命週期（`chromium.launch()` → 渲染 → `browser.close()`），呼叫端不需自行管理 Playwright。
+- 產線對外介面為 `genPng(data, opt)` 與 `genSvg(data, opt)`，`data` 為正規化繪圖數據 `{ dir, nodes, edges }`；`genPng` 回傳 `Promise<Buffer>`（PNG），`genSvg` 回傳 standalone SVG 字串（引擎原生輸出、依 viewBox 寫死寬高、`&nbsp;` 正規化為 `&#160;`）；兩者皆自帶瀏覽器生命週期（`chromium.launch()` → 渲染 → `browser.close()`），呼叫端不需自行管理 Playwright。
 - 統一由 `src/WFlowchart.mjs` 依 `mode === 'p1'` 呼叫，不提供批次流程或落地寫檔行為，是否寫檔、寫至何處由呼叫端決定。
 
 ## 自動化機制

@@ -1,0 +1,27 @@
+{
+  "dir": "TB",
+  "nodes": [
+    { "id": "GRP", "label": "會員註冊流程", "cls": "blueG" },
+    { "id": "n1", "label": "使用者進入註冊頁", "cls": "blue", "group": "GRP" },
+    { "id": "n2", "label": "填寫帳號密碼與信箱", "cls": "blue", "group": "GRP" },
+    { "id": "d1", "label": "格式驗證是否通過", "cls": "diamond", "group": "GRP" },
+    { "id": "n3", "label": "顯示錯誤提示", "cls": "red", "group": "GRP" },
+    { "id": "n4", "label": "檢查帳號是否已存在", "cls": "green", "group": "GRP" },
+    { "id": "d2", "label": "帳號是否重複", "cls": "diamond", "group": "GRP" },
+    { "id": "n5", "label": "建立會員資料並寄送驗證信", "cls": "green", "group": "GRP" },
+    { "id": "n6", "label": "使用者點擊驗證連結啟用帳號", "cls": "orange", "group": "GRP" },
+    { "id": "end", "label": "註冊完成", "cls": "done", "group": "GRP" }
+  ],
+  "edges": [
+    { "from": "n1", "to": "n2" },
+    { "from": "n2", "to": "d1" },
+    { "from": "d1", "to": "n4", "label": "是" },
+    { "from": "d1", "to": "n3", "label": "否" },
+    { "from": "n3", "to": "n2", "kind": "dashed" },
+    { "from": "n4", "to": "d2" },
+    { "from": "d2", "to": "n5", "label": "否" },
+    { "from": "d2", "to": "n3", "label": "是" },
+    { "from": "n5", "to": "n6" },
+    { "from": "n6", "to": "end" }
+  ]
+}

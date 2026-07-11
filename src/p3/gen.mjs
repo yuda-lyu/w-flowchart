@@ -168,7 +168,7 @@ async function autofix(page, src) {
 // 單張渲染: 供其他模組 import 呼叫。輸入單份正規化繪圖數據(結構同 FIGURES[n].data,
 //   caller 已先做 label 衍生), 內部自建 browser/page(避免與批次流程共用 state), 沿用批次流程
 //   同一套 deviceScaleFactor、等待邏輯、碰撞偵測自動調 spacing, 回傳 PNG 之 Node Buffer(不落地檔案)。
-export async function genPng(data, opt = {}) {
+async function renderFigPage(data) {
     const browser = await chromium.launch()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
@@ -177,11 +177,33 @@ export async function genPng(data, opt = {}) {
         const src = translate(data)
         const fx = await autofix(page, src)
         if (!fx.ok) throw new Error(fx.err)
-        // 以最佳間距重繪後截圖
+        // 以最佳間距重繪
         await page.evaluate((x) => window.renderAndDetect(x), '#spacing: ' + fx.spacing + '\n' + src)
         await page.evaluate(() => document.fonts && document.fonts.ready)
         await page.waitForTimeout(180)
+        return { browser, page }
+    }
+    catch (err) {
+        await browser.close()
+        throw err
+    }
+}
+
+// 單張渲染 → PNG Buffer
+export async function genPng(data, opt = {}) {
+    const { browser, page } = await renderFigPage(data)
+    try {
         return await page.locator('#box svg').screenshot()
+    } finally {
+        await browser.close()
+    }
+}
+
+// 單張渲染 → SVG 字串(#box 內後處理完成之 SVG; &nbsp; 正規化為 &#160; 使其為合法 standalone SVG)
+export async function genSvg(data, opt = {}) {
+    const { browser, page } = await renderFigPage(data)
+    try {
+        return (await page.evaluate(() => document.getElementById('box').innerHTML)).replace(/&nbsp;/g, '&#160;').trim()
     } finally {
         await browser.close()
     }

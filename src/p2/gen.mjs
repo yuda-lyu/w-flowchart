@@ -37,6 +37,20 @@ export function translate(data) {
     const dir = data.dir || 'TB'
     const innerDir = dir === 'TB' ? 'LR' : 'TB'
 
+    // mermaid 保留字(end/click/style/class/subgraph/direction 等)不可作節點 id → 一律加前綴消歧
+    //   僅影響 DSL 內部識別(顯示文字仍用 label); 不同原 id 淨化後若同名, 以序號區隔避免節點被合併
+    const used = new Set()
+    const qidMap = {}
+    const qid = (id) => {
+        if (qidMap[id]) return qidMap[id]
+        const base = 'n_' + String(id).replace(/[^A-Za-z0-9_]/g, '_')
+        let q = base, k = 2
+        while (used.has(q)) q = base + '_' + (k++)
+        used.add(q)
+        qidMap[id] = q
+        return q
+    }
+
     // 建立 group → children 映射(children 依 nodes 原序)
     const childrenOf = {}  // groupId → [nodeId]
     const nodeById = {}
@@ -57,7 +71,7 @@ export function translate(data) {
     function renderNode(nd, indent) {
         const sp = '  '.repeat(indent)
         if (isGroupCls(nd.cls)) {
-            lines.push(`${sp}subgraph ${nd.id}["${nd.label}"]`)
+            lines.push(`${sp}subgraph ${qid(nd.id)}["${nd.label}"]`)
             lines.push(`${sp}  direction ${innerDir}`)
             const kids = childrenOf[nd.id] || []
             for (const cid of kids) renderNode(nodeById[cid], indent + 1)
@@ -66,7 +80,7 @@ export function translate(data) {
             const shape = nd.cls === 'diamond'
                 ? `{${nd.label}}`
                 : `["${nd.label}"]`
-            lines.push(`${sp}${nd.id}${shape}`)
+            lines.push(`${sp}${qid(nd.id)}${shape}`)
         }
     }
 
@@ -77,7 +91,7 @@ export function translate(data) {
     for (const ed of data.edges) {
         const arrow = ed.kind === 'dashed' ? '-.->' : '-->'
         const lbl = ed.label ? `|"${ed.label}"|` : ''
-        lines.push(`  ${ed.from} ${arrow}${lbl} ${ed.to}`)
+        lines.push(`  ${qid(ed.from)} ${arrow}${lbl} ${qid(ed.to)}`)
     }
 
     // classDef: 蒐集所有出現的 cls, 從 palette 取色
@@ -96,7 +110,7 @@ export function translate(data) {
         lines.push(`  classDef ${cls} fill:${fillColor},stroke:${strokeColor},stroke-width:${sw},color:${textColor};`)
     }
     for (const [cls, ids] of Object.entries(clsByNodes)) {
-        lines.push(`  class ${ids.join(',')} ${cls};`)
+        lines.push(`  class ${ids.map(qid).join(',')} ${cls};`)
     }
 
     return lines.join('\n')
@@ -187,10 +201,9 @@ try {
 } catch(e){ window.__setupErr = (e&&(e.message||e.stack))||String(e) }
 </script></body></html>`
 
-// 單張渲染 — 供其他模組 import 使用
+// 渲染單張至就緒頁面(renderFig 完成); caller 負責 close browser
 // data: 正規化繪圖數據 { dir, nodes, edges }(caller 已先做 label 衍生)
-// 回傳: PNG 圖片的 Node Buffer
-export async function genPng(data, opt = {}) {
+async function renderFigPage(data) {
     const code = FM + translate(data)
     const browser = await chromium.launch()
     try {
@@ -203,7 +216,39 @@ export async function genPng(data, opt = {}) {
         const r = await page.evaluate(([c, idx]) => window.renderFig(c, idx), [code, 0])
         if (!r.ok) throw new Error(r.err)
         await page.waitForTimeout(250)
+        return { browser, page }
+    }
+    catch (err) {
+        await browser.close()
+        throw err
+    }
+}
+
+// 單張渲染 → PNG Buffer
+export async function genPng(data, opt = {}) {
+    const { browser, page } = await renderFigPage(data)
+    try {
         return await page.locator('#box svg').screenshot()
+    } finally {
+        await browser.close()
+    }
+}
+
+// 單張渲染 → SVG 字串(#box 內後處理完成之 SVG; &nbsp; 正規化為 &#160; 使其為合法 standalone SVG)
+//   頁面 <head><style> 之視覺修正 CSS(邊標籤透明底/光暈/字型覆蓋)序列化後會遺失 → 內嵌進 SVG 根使其 standalone
+export async function genSvg(data, opt = {}) {
+    const { browser, page } = await renderFigPage(data)
+    try {
+        return (await page.evaluate(() => {
+            const el = document.querySelector('#box svg')
+            const css = Array.from(document.querySelectorAll('head style')).map(s => s.textContent).join('\n')
+            const st = document.createElementNS('http://www.w3.org/2000/svg', 'style')
+            st.textContent = css
+            el.insertBefore(st, el.firstChild)
+            const out = document.getElementById('box').innerHTML
+            st.remove()
+            return out
+        })).replace(/&nbsp;/g, '&#160;').trim()
     } finally {
         await browser.close()
     }

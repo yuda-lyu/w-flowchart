@@ -8,11 +8,11 @@ import { pkgScript } from '../common/pkg.mjs'
 // mermaid@10 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
 const MERMAID_JS = pkgScript('mermaid10/dist/mermaid.min.js')
 
-// 把標準節點 label 轉成 mermaid 節點形狀語法
+// 把標準節點 label 轉成 mermaid 節點形狀語法(id 經 qid 消歧)
 //   diamond → {label}  / 其餘 → ["label"]
-function nodeShape(nd) {
-    if (nd.cls === 'diamond') return `${nd.id}{"${nd.label}"}`
-    return `${nd.id}["${nd.label}"]`
+function nodeShape(nd, qid) {
+    if (nd.cls === 'diamond') return `${qid(nd.id)}{"${nd.label}"}`
+    return `${qid(nd.id)}["${nd.label}"]`
 }
 
 // 正規化數據 → mermaid flowchart DSL 字串
@@ -26,6 +26,20 @@ function nodeShape(nd) {
 //      d. classDef + class 指派
 function translate(data) {
     const { dir, nodes, edges } = data
+
+    // mermaid 保留字(end/click/style/class/subgraph/direction 等)不可作節點 id → 一律加前綴消歧
+    //   僅影響 DSL 內部識別(顯示文字仍用 label); 不同原 id 淨化後若同名, 以序號區隔避免節點被合併
+    const used = new Set()
+    const qidMap = {}
+    const qid = (id) => {
+        if (qidMap[id]) return qidMap[id]
+        const base = 'n_' + String(id).replace(/[^A-Za-z0-9_]/g, '_')
+        let q = base, k = 2
+        while (used.has(q)) q = base + '_' + (k++)
+        used.add(q)
+        qidMap[id] = q
+        return q
+    }
 
     // 索引: id → node
     const byId = {}
@@ -59,7 +73,7 @@ function translate(data) {
     }
     const classLines = []
     for (const [cls, ids] of Object.entries(clsToIds)) {
-        classLines.push(`  class ${ids.join(',')} ${cls}`)
+        classLines.push(`  class ${ids.map(qid).join(',')} ${cls}`)
     }
 
     // 拓樸: 哪些節點直接屬於哪個容器(含巢狀)
@@ -73,11 +87,11 @@ function translate(data) {
     function renderSubgraph(gid, indent) {
         const g = byId[gid]
         const lines = []
-        lines.push(`${indent}subgraph ${gid}["${g.label}"]`)
+        lines.push(`${indent}subgraph ${qid(gid)}["${g.label}"]`)
         // 直接子節點(非容器)
         const directChildren = nodes.filter(nd => nd.group === gid && !isGroupCls(nd.cls))
         for (const nd of directChildren) {
-            lines.push(`${indent}  ${nodeShape(nd)}`)
+            lines.push(`${indent}  ${nodeShape(nd, qid)}`)
         }
         // 巢狀容器(容器的 group === gid)
         const nestedGroups = nodes.filter(nd => isGroupCls(nd.cls) && nd.group === gid)
@@ -93,14 +107,14 @@ function translate(data) {
     for (const ed of edges) {
         const arrow = ed.kind === 'dashed' ? '-..->' : '-->'
         const lbl = ed.label ? `|"${ed.label}"| ` : ''
-        edgeLines.push(`  ${ed.from} ${arrow} ${lbl}${ed.to}`)
+        edgeLines.push(`  ${qid(ed.from)} ${arrow} ${lbl}${qid(ed.to)}`)
     }
 
     // 組裝 DSL
     const lines = [`flowchart ${dir}`]
     // 1. 獨立節點
     for (const nd of standaloneNodes) {
-        lines.push(`  ${nodeShape(nd)}`)
+        lines.push(`  ${nodeShape(nd, qid)}`)
     }
     // 2. 頂層 subgraph
     for (const gid of topGroupIds) {
@@ -169,35 +183,55 @@ mermaid.initialize({ startOnLoad:false, theme:'base', themeVariables:{ fontFamil
 </script></body></html>`
 }
 
-// 單張渲染: 每張用新 page(避免 mermaid render id 衝突), deviceScaleFactor:4(向量圖放大提高清晰度)
-//   fpOut 省略時不寫檔; 皆回傳 PNG Buffer
-async function genFig(browser, code, fpOut) {
-    const page = await browser.newPage({ deviceScaleFactor: 4 })
+// 渲染單張至就緒頁面(mermaid DONE + 字型就緒), deviceScaleFactor:4(向量圖放大提高清晰度); caller 負責 close browser
+async function renderFigPage(code) {
+    const browser = await chromium.launch()
     try {
+        const page = await browser.newPage({ deviceScaleFactor: 4 })
         await page.setContent(mermaidHtml(code), { waitUntil: 'load' })
         await page.waitForFunction(() => document.title === 'DONE' || document.title === 'FAIL', { timeout: 30000 })
         const title = await page.title()
         if (title !== 'DONE') {
             const msg = await page.evaluate(() => { const el = document.getElementById('box'); return el ? el.innerText : '' })
-            throw new Error(`mermaid render failed for ${fpOut || '(buffer)'}: ${msg}`)
+            throw new Error(`mermaid render failed: ${msg}`)
         }
         await page.evaluate(() => document.fonts.ready)
-        return await page.locator('#box svg').screenshot(fpOut ? { path: fpOut } : {})
+        return { browser, page }
     }
-    finally {
-        await page.close()
+    catch (err) {
+        await browser.close()
+        throw err
     }
 }
 
 // 單張渲染 → PNG Buffer(供 WFlowchart 統一入口呼叫; 自帶瀏覽器生命週期)
 async function genPng(data, opt = {}) {
-    const browser = await chromium.launch()
+    const { browser, page } = await renderFigPage(translate(data))
     try {
-        return await genFig(browser, translate(data), null)
+        return await page.locator('#box svg').screenshot()
     }
     finally {
         await browser.close()
     }
 }
 
-export { genPng }
+// 單張渲染 → SVG 字串(#box 內後處理完成之 SVG; &nbsp; 正規化為 &#160; 使其為合法 standalone SVG)
+//   mermaid 之 svg 為響應式(width:100% + max-width), 脫離頁面尺寸會漂移 → 序列化前依 viewBox 寫死 width/height
+async function genSvg(data, opt = {}) {
+    const { browser, page } = await renderFigPage(translate(data))
+    try {
+        return (await page.evaluate(() => {
+            const el = document.querySelector('#box svg')
+            const vb = el.viewBox.baseVal
+            el.style.maxWidth = 'none'
+            el.setAttribute('width', Math.ceil(vb.width))
+            el.setAttribute('height', Math.ceil(vb.height))
+            return document.getElementById('box').innerHTML
+        })).replace(/&nbsp;/g, '&#160;').trim()
+    }
+    finally {
+        await browser.close()
+    }
+}
+
+export { genPng, genSvg }

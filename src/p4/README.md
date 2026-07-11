@@ -5,7 +5,7 @@
 - **繪圖庫**：Cytoscape.js（`cytoscape/dist/cytoscape.min.js`）搭配 dagre 排版引擎（`dagre/dist/dagre.min.js`）與橋接外掛（`cytoscape-dagre/dist/cytoscape-dagre.js`），三者由本機 `node_modules` 讀出後內聯注入頁面 `<script>`（`common/pkg.mjs` 的 `pkgScript()`），非透過 CDN，斷網環境亦可渲染。
 - **渲染環境**：由 Playwright `chromium.launch()` 開啟無頭瀏覽器，`page.setContent()` 注入含三段內聯 script 的靜態 HTML，頁面掛載一個 `1400×1400px` 的 `<div id="cy">` 作為 Cytoscape 容器。
 - **截圖與匯出**：排版完成後呼叫 `cy.png({ full:true, scale:2, bg:'#ffffff', output:'base64' })` 取得 base64 字串，存入全域變數 `window.__png`，再由 `page.evaluate()` 讀回 Node 端，以 `Buffer.from(b64, 'base64')` 轉為 PNG Buffer 回傳。`full:true` 使輸出範圍自動裁切至實際元素範圍，`scale:2` 使最終 PNG 解析度為實際佈局尺寸的 2 倍；`deviceScaleFactor` 設為 `1`（由 `browser.newPage({ deviceScaleFactor:1 })` 指定），縮放完全由 `cy.png` 的 `scale:2` 控制。
-- **呼叫方式**：`genPng(data, opt)` 為單張渲染函式，接受正規化繪圖數據 `{ dir, nodes, edges }`，內部自建 browser/page 並於結束時關閉，回傳 PNG 的 Node Buffer（不落地檔案），由 `src/WFlowchart.mjs` 統一調用（`mode: 'p4'`）。
+- **呼叫方式**：`genPng(data, opt)` 為單張渲染函式，接受正規化繪圖數據 `{ dir, nodes, edges }`，內部自建 browser/page 並於結束時關閉，回傳 PNG 的 Node Buffer（不落地檔案），由 `src/WFlowchart.mjs` 統一調用（`mode: 'p4'`）；同結構之 `genSvg(data, opt)` 經 `cytoscape-svg` 外掛將同一份佈局/樣式匯出為 SVG 字串（canvas 引擎重繪為 SVG，經像素級忠實度驗證）。
 
 ## 產製原理（資料驅動）
 

@@ -1,0 +1,203 @@
+{
+  "dir": "LR",
+  "nodes": [
+    {
+      "id": "DEV",
+      "label": "裝置端",
+      "cls": "blueG"
+    },
+    {
+      "id": "GTW",
+      "label": "閘道層",
+      "cls": "greenG"
+    },
+    {
+      "id": "CLD",
+      "label": "雲端平台",
+      "cls": "orangeG"
+    },
+    {
+      "id": "dev1",
+      "label": "溫濕度感測器",
+      "cls": "blue",
+      "group": "DEV"
+    },
+    {
+      "id": "dev2",
+      "label": "攝影機裝置",
+      "cls": "blue",
+      "group": "DEV"
+    },
+    {
+      "id": "dev3",
+      "label": "智慧電表",
+      "cls": "blue",
+      "group": "DEV"
+    },
+    {
+      "id": "dev4",
+      "title": "邊緣控制器",
+      "items": [
+        "資料緩衝",
+        "協定轉換"
+      ],
+      "cls": "blue",
+      "group": "DEV"
+    },
+    {
+      "id": "gw1",
+      "label": "協定閘道",
+      "cls": "green",
+      "group": "GTW"
+    },
+    {
+      "id": "gw2",
+      "title": "訊息代理",
+      "items": [
+        "訊息佇列",
+        "主題路由"
+      ],
+      "cls": "green",
+      "group": "GTW"
+    },
+    {
+      "id": "gw3",
+      "label": "本地快取",
+      "cls": "green",
+      "group": "GTW"
+    },
+    {
+      "id": "cld1",
+      "label": "API 閘道",
+      "cls": "orange",
+      "group": "CLD"
+    },
+    {
+      "id": "cld2",
+      "title": "資料處理服務",
+      "items": [
+        "清洗",
+        "聚合",
+        "異常偵測"
+      ],
+      "cls": "orange",
+      "group": "CLD"
+    },
+    {
+      "id": "cld3",
+      "label": "時序資料庫",
+      "cls": "orange",
+      "group": "CLD"
+    },
+    {
+      "id": "cld4",
+      "label": "告警服務",
+      "cls": "orange",
+      "group": "CLD"
+    },
+    {
+      "id": "cld5",
+      "label": "監控儀表板",
+      "cls": "orange",
+      "group": "CLD"
+    },
+    {
+      "id": "cld6",
+      "label": "歷史報表服務",
+      "cls": "orange",
+      "group": "CLD"
+    },
+    {
+      "id": "dev5",
+      "label": "智慧門鎖",
+      "cls": "blue",
+      "group": "DEV"
+    },
+    {
+      "id": "cld7",
+      "label": "使用者入口網站",
+      "cls": "orange",
+      "group": "CLD"
+    }
+  ],
+  "edges": [
+    {
+      "from": "dev1",
+      "to": "gw1",
+      "label": "回報遙測",
+      "kind": "dashed"
+    },
+    {
+      "from": "dev2",
+      "to": "gw1",
+      "label": "影像串流",
+      "kind": "dashed"
+    },
+    {
+      "from": "dev3",
+      "to": "gw2",
+      "label": "回報遙測",
+      "kind": "dashed"
+    },
+    {
+      "from": "dev4",
+      "to": "gw2",
+      "label": "訊息轉送"
+    },
+    {
+      "from": "gw1",
+      "to": "gw3",
+      "label": "本地儲存"
+    },
+    {
+      "from": "gw1",
+      "to": "cld1",
+      "label": "上傳雲端"
+    },
+    {
+      "from": "gw2",
+      "to": "cld1",
+      "label": "上傳雲端"
+    },
+    {
+      "from": "cld1",
+      "to": "cld2"
+    },
+    {
+      "from": "cld2",
+      "to": "cld3",
+      "label": "時序寫入"
+    },
+    {
+      "from": "cld2",
+      "to": "cld4",
+      "label": "觸發告警",
+      "kind": "dashed"
+    },
+    {
+      "from": "cld2",
+      "to": "cld5",
+      "label": "監控呈現"
+    },
+    {
+      "from": "cld2",
+      "to": "cld6"
+    },
+    {
+      "from": "cld2",
+      "to": "cld7"
+    },
+    {
+      "from": "cld4",
+      "to": "dev4",
+      "label": "下發控制指令",
+      "kind": "dashed"
+    },
+    {
+      "from": "dev5",
+      "to": "gw1",
+      "label": "回報遙測",
+      "kind": "dashed"
+    }
+  ]
+}

@@ -1,0 +1,156 @@
+{
+  "dir": "TB",
+  "nodes": [
+    {
+      "id": "UI",
+      "label": "展示層",
+      "cls": "blueG"
+    },
+    {
+      "id": "APP",
+      "label": "應用層",
+      "cls": "greenG"
+    },
+    {
+      "id": "DOM",
+      "label": "領域層",
+      "cls": "orangeG"
+    },
+    {
+      "id": "INF",
+      "label": "基礎層",
+      "cls": "purpleG"
+    },
+    {
+      "id": "DATA",
+      "label": "資料層",
+      "cls": "blueG2"
+    },
+    {
+      "id": "ui1",
+      "label": "網頁介面",
+      "cls": "blue",
+      "group": "UI"
+    },
+    {
+      "id": "ui2",
+      "label": "行動介面",
+      "cls": "blue",
+      "group": "UI"
+    },
+    {
+      "id": "ui3",
+      "title": "入口整合",
+      "items": [
+        "單一登入",
+        "多裝置佈局"
+      ],
+      "cls": "blue",
+      "group": "UI"
+    },
+    {
+      "id": "app1",
+      "label": "API 控制器",
+      "cls": "green",
+      "group": "APP"
+    },
+    {
+      "id": "app2",
+      "title": "應用服務",
+      "items": [
+        "流程協調",
+        "交易腳本",
+        "跨系統交易流程協調與非同步例外復原重試機制完整說明"
+      ],
+      "cls": "green",
+      "group": "APP"
+    },
+    {
+      "id": "app3",
+      "label": "資料驗證",
+      "cls": "green",
+      "group": "APP"
+    },
+    {
+      "id": "dom1",
+      "title": "領域模型",
+      "items": [
+        "實體",
+        "值物件",
+        "領域服務"
+      ],
+      "cls": "orange",
+      "group": "DOM"
+    },
+    {
+      "id": "dom2",
+      "label": "業務規則引擎",
+      "cls": "orange",
+      "group": "DOM"
+    },
+    {
+      "id": "dom3",
+      "label": "領域事件發布",
+      "cls": "orange",
+      "group": "DOM"
+    },
+    {
+      "id": "inf1",
+      "label": "訊息佇列",
+      "cls": "purple",
+      "group": "INF"
+    },
+    {
+      "id": "inf2",
+      "label": "快取",
+      "cls": "purple",
+      "group": "INF"
+    },
+    {
+      "id": "inf3",
+      "label": "外部整合介面",
+      "cls": "purple",
+      "group": "INF"
+    },
+    {
+      "id": "data1",
+      "label": "主要資料庫",
+      "cls": "blue",
+      "group": "DATA"
+    },
+    {
+      "id": "data2",
+      "label": "檔案儲存",
+      "cls": "blue",
+      "group": "DATA"
+    },
+    {
+      "id": "data3",
+      "label": "備份儲存",
+      "cls": "blue",
+      "group": "DATA"
+    }
+  ],
+  "edges": [
+    {
+      "from": "UI",
+      "to": "APP",
+      "label": "呼叫應用服務"
+    },
+    {
+      "from": "APP",
+      "to": "DOM",
+      "label": "調用領域邏輯"
+    },
+    {
+      "from": "DOM",
+      "to": "INF",
+      "label": "存取基礎設施"
+    },
+    {
+      "from": "INF",
+      "to": "DATA",
+      "label": "讀寫資料"
+    }
+  ]
+}

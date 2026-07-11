@@ -14,7 +14,7 @@
 - **解析度處理**：不使用固定 `deviceScaleFactor`，改為通用公式依 SVG `viewBox` 寬動態推算 `density`（見自動化機制節），讓輸出像素寬落在 1600–2200 px 區間。
 - **字型問題**：本專案所用之 D2 傳入自訂 font buffer 會穩定回傳 `"invalid JSON input"`（實測），故不傳字型給 D2，改在產生的 SVG 插入 `<style>text{font-family:"Microsoft JhengHei","Microsoft YaHei",sans-serif !important;}</style>` 讓 librsvg 以系統安裝的 Microsoft JhengHei 描繪中文。D2 引擎本身已內建 CJK 全形寬度量測，故即使長中文標籤，box 寬度也不溢出。
 - **邊標籤光暈**：D2 對有標籤的邊會用 `mask` + 黑色 `rect` 遮斷連線偽造白底效果，且標籤文字疊在連線正上方；`injectEdgeLabelHalo(svg)` 移除 mask 內黑色 rect 讓連線完整穿過標籤區，並注入 CSS 為 `.text-italic` 加 `paint-order:stroke` + 白色描邊，使標籤文字在線段上仍清晰可讀。
-- **介面**：`genPng(data, opt)` 為單張渲染函式，回傳值為 PNG Buffer（不寫檔），由 `src/WFlowchart.mjs` 統一調用；`data` 為正規化繪圖數據 `{ dir, nodes, edges }`（caller 已完成 label 衍生）。
+- **介面**：`genPng(data, opt)` 為單張渲染函式，回傳值為 PNG Buffer（不寫檔），由 `src/WFlowchart.mjs` 統一調用；`data` 為正規化繪圖數據 `{ dir, nodes, edges }`（caller 已完成 label 衍生）；同結構之 `genSvg(data, opt)` 回傳 D2 引擎原生輸出之 SVG 字串（已套用邊標籤光暈與字型注入之後處理）。
 
 ## 產製原理（資料驅動）
 

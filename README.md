@@ -43,7 +43,11 @@ let inp = {
     ],
 }
 
-let buf = await WFlowchart('p10', inp) //mode 可選 'p1'~'p10', 各對應一套繪圖引擎產線
+let buf = await WFlowchart(inp) //預設 opt.mode 為 'p10'; 可用 WFlowchart(inp, { mode: 'p3' }) 指定產線('p1'~'p10' 各對應一套繪圖引擎)
 fs.writeFileSync('flowchart.png', buf)
 // => 產出 flowchart.png
+
+let svg = await WFlowchart(inp, { output: 'svg' }) //輸出 standalone SVG 字串(p1~p8 與 p10 支援; p9 不支援)
+fs.writeFileSync('flowchart.svg', svg)
+// => 產出 flowchart.svg
 ```

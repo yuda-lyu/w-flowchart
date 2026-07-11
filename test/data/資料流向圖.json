@@ -1,0 +1,137 @@
+{
+  "dir": "LR",
+  "nodes": [
+    {
+      "id": "SRC",
+      "label": "資料來源",
+      "cls": "blueG",
+      "align": "top"
+    },
+    {
+      "id": "PROC",
+      "label": "資料處理",
+      "cls": "greenG",
+      "align": "center"
+    },
+    {
+      "id": "OUT",
+      "label": "資料輸出",
+      "cls": "orangeG",
+      "align": "bottom"
+    },
+    {
+      "id": "src1",
+      "title": "感測資料",
+      "items": [
+        "溫度",
+        "濕度",
+        "壓力",
+        "流量"
+      ],
+      "cls": "blue",
+      "group": "SRC"
+    },
+    {
+      "id": "src2",
+      "label": "手動輸入",
+      "cls": "blue",
+      "group": "SRC"
+    },
+    {
+      "id": "src3",
+      "label": "第三方饋入",
+      "cls": "blue",
+      "group": "SRC"
+    },
+    {
+      "id": "p1",
+      "title": "資料清洗",
+      "items": [
+        "去除雜訊",
+        "補值",
+        "格式轉換",
+        "單位換算"
+      ],
+      "cls": "green",
+      "group": "PROC"
+    },
+    {
+      "id": "p2",
+      "label": "資料合併",
+      "cls": "green",
+      "group": "PROC"
+    },
+    {
+      "id": "p3",
+      "label": "重複資料比對",
+      "cls": "green",
+      "group": "PROC"
+    },
+    {
+      "id": "o1",
+      "title": "統計報表",
+      "items": [
+        "日報",
+        "週報",
+        "月報",
+        "異常報告"
+      ],
+      "cls": "orange",
+      "group": "OUT"
+    },
+    {
+      "id": "o2",
+      "label": "警示通知",
+      "cls": "orange",
+      "group": "OUT"
+    },
+    {
+      "id": "o3",
+      "label": "客製化輸出",
+      "cls": "orange",
+      "group": "OUT"
+    }
+  ],
+  "edges": [
+    {
+      "from": "src1",
+      "to": "p1",
+      "label": "傳送"
+    },
+    {
+      "from": "src2",
+      "to": "p1",
+      "label": "傳送"
+    },
+    {
+      "from": "src3",
+      "to": "p3",
+      "label": "傳送"
+    },
+    {
+      "from": "p1",
+      "to": "p2",
+      "label": "清洗後"
+    },
+    {
+      "from": "p3",
+      "to": "p2",
+      "label": "比對後"
+    },
+    {
+      "from": "p2",
+      "to": "o1",
+      "label": "彙整"
+    },
+    {
+      "from": "p2",
+      "to": "o2",
+      "label": "異常觸發"
+    },
+    {
+      "from": "p2",
+      "to": "o3",
+      "label": "客製需求"
+    }
+  ]
+}
