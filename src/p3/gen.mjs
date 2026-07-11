@@ -66,23 +66,29 @@ function translate(data) {
     const byId = {}
     for (const nd of data.nodes) byId[nd.id] = nd
 
-    // 所有節點頂層平鋪宣告
-    const nodeDsls = data.nodes.map(nd => `[${classifier(nd.cls)}${nd.label}]`).join('\n')
+    // label 內 \n 強制換行 → nomnoml 節點文字以 ; 斷行(節點宣告與邊參照須同轉換才對得上);
+    //   邊標籤不支援多行 → 降級為空格(避免字面換行使版面錯亂)
+    const nl = (s) => String(s).replace(/\n/g, ';')
+    const nlSp = (s) => String(s).replace(/\n/g, ' ')
+
+    // 所有節點頂層平鋪宣告; 菱形(choice)之多行內文會超出斜邊被裁 → \n 降級為空格(單行加寬菱形)
+    const nodeLabel = (nd) => nd.cls === 'diamond' ? nlSp(nd.label) : nl(nd.label)
+    const nodeDsls = data.nodes.map(nd => `[${classifier(nd.cls)}${nodeLabel(nd)}]`).join('\n')
 
     // 群組歸屬邊: 容器(group 所指節點) → 成員, 虛線無箭頭語意以外之標籤
     //   nomnoml 無容器框, 比照 p10/vis 以關聯邊表達歸屬, 讓排版把成員擺在容器旁
     const assocDsls = data.nodes
         .filter(nd => nd.group && byId[nd.group])
-        .map(nd => `[${byId[nd.group].label}] --> [${nd.label}]`)
+        .map(nd => `[${nodeLabel(byId[nd.group])}] --> [${nodeLabel(nd)}]`)
         .join('\n')
 
-    // 數據明列之邊: 端點以既有節點之確切標籤參照(不新建節點)
+    // 數據明列之邊: 端點以既有節點之確切標籤參照(不新建節點; 轉換須與節點宣告一致才對得上)
     const edgeDsls = data.edges.map(ed => {
-        const fromLabel = byId[ed.from]?.label ?? ed.from
-        const toLabel = byId[ed.to]?.label ?? ed.to
+        const fromRef = byId[ed.from] ? nodeLabel(byId[ed.from]) : nl(ed.from)
+        const toRef = byId[ed.to] ? nodeLabel(byId[ed.to]) : nl(ed.to)
         const arrow = ed.kind === 'dashed' ? '-->' : '->'
-        const edgeLabel = ed.label ? ` ${ed.label} ` : ' '
-        return `[${fromLabel}]${edgeLabel}${arrow} [${toLabel}]`
+        const edgeLabel = ed.label ? ` ${nlSp(ed.label)} ` : ' '
+        return `[${fromRef}]${edgeLabel}${arrow} [${toRef}]`
     }).join('\n')
 
     return `#direction: ${dir}

@@ -42,16 +42,21 @@ var __cv = document.createElement('canvas'); var __cx = __cv.getContext('2d')
 function measure(text, fs){ __cx.font = fs + 'px ' + FONT; return __cx.measureText(text).width }
 
 // 依字寬自動換行(回傳 lines 陣列 + 最大寬)
+//   label 內 \\n 為強制換行: 先依 \\n 切段、各段再逐字寬斷行——渲染端以 join('\\n') 交給 JointJS,
+//   若量測不切 \\n 會令實際行數多於估算行數, 框高低估、文字上下溢出框
 function wrapText(text, fs, maxW){
-  // 先嘗試以全形分隔符/括號斷點，否則逐字
-  var lines = [], cur = ''
-  for (var i = 0; i < text.length; i++){
-    var ch = text[i]
-    var test = cur + ch
-    if (measure(test, fs) > maxW && cur !== ''){ lines.push(cur); cur = ch }
-    else cur = test
-  }
-  if (cur) lines.push(cur)
+  var lines = []
+  String(text).split('\\n').forEach(function(seg){
+    var cur = ''
+    for (var i = 0; i < seg.length; i++){
+      var ch = seg[i]
+      var test = cur + ch
+      if (measure(test, fs) > maxW && cur !== ''){ lines.push(cur); cur = ch }
+      else cur = test
+    }
+    lines.push(cur)   // 空段亦保留(連續 \\n 表空行)
+  })
+  if (lines.length === 1 && lines[0] === '') lines = []   // 空字串輸入維持原行為(零行)
   var w = 0; lines.forEach(function(l){ w = Math.max(w, measure(l, fs)) })
   return { lines: lines, w: w }
 }

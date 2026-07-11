@@ -362,4 +362,85 @@ export const CASES = [
         },
     },
 
+    // 17) label 內 \n 強制換行(節點/群組標題/菱形/邊標籤; white-space:pre-line 量測與渲染一致)
+    {
+        name: 'newline-label',
+        desc: '換行 — label 內 \\n 為強制換行(含 edge/群組/菱形 label)',
+        data: {
+            dir: 'TB',
+            nodes: [
+                { id: 'G', label: '群組\n標題', cls: 'greenG' },
+                { id: 'A', label: '產出各語之\n搜尋與列表索引', cls: 'blue', group: 'G' },
+                { id: 'B', label: '產出各語之搜尋與列表索引', cls: 'blue' },
+                { id: 'D', label: '判斷\n嗎?', cls: 'diamond' },
+            ],
+            edges: [{ from: 'A', to: 'B', label: '第一行\n第二行' }, { from: 'B', to: 'D' }],
+        },
+        check(spec, geom, h) {
+            const A = h.node('A'); const B = h.node('B')
+            return [
+                // \n 生效 → A 折成兩行: 高於單行之 B、窄於同文案無 \n 之 B
+                { name: 'A 兩行(高於單行 B)', pass: !!A && !!B && A.h >= B.h + 14, detail: A && B && `A.h=${A.h} B.h=${B.h}` },
+                { name: 'A 依換行點收窄(窄於 B)', pass: !!A && !!B && A.w < B.w - 30, detail: A && B && `A.w=${A.w} B.w=${B.w}` },
+            ]
+        },
+    },
+
+    // 18) \n 行數階梯(1/2/3 行)+ 英文混排 + 多行邊標籤: 行數愈多框愈高(spec: 每個 \n 即一次強制換行)
+    {
+        name: 'newline-multi',
+        desc: '換行 — 1/2/3 行階梯與英文/邊標籤多行',
+        data: {
+            dir: 'TB',
+            nodes: [
+                { id: 'S', label: '單行節點', cls: 'blue' },
+                { id: 'M2', label: '兩行標籤\n第二行', cls: 'green' },
+                { id: 'M3', label: '三行標籤\n第二行\n第三行', cls: 'orange' },
+                { id: 'EN', label: 'Alpha Beta\nGamma Service', cls: 'purple' },
+            ],
+            edges: [
+                { from: 'S', to: 'M2', label: '確認\n送出' },
+                { from: 'M2', to: 'M3' },
+                { from: 'M3', to: 'EN', kind: 'dashed', label: 'retry\nonce' },
+            ],
+        },
+        check(spec, geom, h) {
+            const S = h.node('S'); const M2 = h.node('M2'); const M3 = h.node('M3'); const EN = h.node('EN')
+            return [
+                { name: '兩行高於單行', pass: !!S && !!M2 && M2.h >= S.h + 14, detail: S && M2 && `S.h=${S.h} M2.h=${M2.h}` },
+                { name: '三行高於兩行', pass: !!M2 && !!M3 && M3.h >= M2.h + 14, detail: M2 && M3 && `M2.h=${M2.h} M3.h=${M3.h}` },
+                { name: '英文兩行與中文兩行同高', pass: !!EN && !!M2 && Math.abs(EN.h - M2.h) <= 2, detail: EN && M2 && `EN.h=${EN.h} M2.h=${M2.h}` },
+            ]
+        },
+    },
+
+    // 19) LR 方向 + 群組標題/菱形/跨群組邊標籤之 \n(換行支援不受方向與容器影響)
+    {
+        name: 'newline-lr',
+        desc: '換行 — LR 方向 + 群組標題/菱形多行',
+        data: {
+            dir: 'LR',
+            nodes: [
+                { id: 'G', label: '前置\n處理群組', cls: 'blueG' },
+                { id: 'A', label: '接收\n輸入資料', cls: 'blue', group: 'G' },
+                { id: 'B', label: '正規化', cls: 'blue', group: 'G' },
+                { id: 'D', label: '格式\n是否\n正確?', cls: 'diamond' },
+                { id: 'E', label: '完成', cls: 'done' },
+            ],
+            edges: [
+                { from: 'A', to: 'B' },
+                { from: 'B', to: 'D', label: '檢查\n格式' },
+                { from: 'D', to: 'E', label: '通過' },
+                { from: 'D', to: 'A', kind: 'dashed', label: '退回\n重新接收' },
+            ],
+        },
+        check(spec, geom, h) {
+            const A = h.node('A'); const B = h.node('B'); const D = h.node('D')
+            return [
+                { name: '群組內兩行節點高於單行', pass: !!A && !!B && A.h >= B.h + 14, detail: A && B && `A.h=${A.h} B.h=${B.h}` },
+                { name: '菱形三行(高度足納三行)', pass: !!D && D.h >= 90, detail: D && `D.h=${D.h}` },
+            ]
+        },
+    },
+
 ]

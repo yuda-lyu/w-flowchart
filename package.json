@@ -1,6 +1,6 @@
 {
   "name": "w-flowchart",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "dist/w-flowchart.umd.js",
   "dependencies": {
     "@antv/g-lite": "^2.7.0",

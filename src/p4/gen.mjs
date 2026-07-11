@@ -34,7 +34,7 @@ const style = `[
   { "selector":"node.greenG2", "style":{ "background-color":"#eaf4ef","border-color":"#348a5c","color":"#348a5c" } },
   { "selector":"node.orangeG", "style":{ "background-color":"#fdf6ec","border-color":"#c46e1a","color":"#c46e1a" } },
   { "selector":"node.purpleG", "style":{ "background-color":"#faf7fd","border-color":"#8163ad","color":"#8163ad" } },
-  { "selector":"edge", "style":{ "width":2.2,"line-color":"#44505a","target-arrow-color":"#44505a","target-arrow-shape":"triangle","curve-style":"bezier","label":"data(label)","font-family":"Microsoft JhengHei, sans-serif","font-size":12.5,"color":"#4a5560","text-background-opacity":0,"text-outline-color":"#ffffff","text-outline-width":3,"text-margin-y":-2 } },
+  { "selector":"edge", "style":{ "width":2.2,"line-color":"#44505a","target-arrow-color":"#44505a","target-arrow-shape":"triangle","curve-style":"bezier","label":"data(label)","font-family":"Microsoft JhengHei, sans-serif","font-size":12.5,"color":"#4a5560","text-background-opacity":0,"text-outline-color":"#ffffff","text-outline-width":3,"text-margin-y":-2,"text-wrap":"wrap" } },
   { "selector":"edge.dashed", "style":{ "line-style":"dashed" } }
 ]`
 

@@ -51,3 +51,5 @@ let svg = await WFlowchart(inp, { output: 'svg' }) //輸出 standalone SVG 字�
 fs.writeFileSync('flowchart.svg', svg)
 // => 產出 flowchart.svg
 ```
+
+label 換行行為(p10):label 過寬時會依最大寬度自動斷行(中文於字間、英數於空白/標點,不會攔腰斷字);label 內可用 `\n` 強制換行(節點、群組標題、菱形與邊標籤皆支援),其餘空白照常摺疊。其他產線(p1~p9)之換行行為依各引擎而定。

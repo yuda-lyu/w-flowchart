@@ -173,7 +173,8 @@ function layout(P, nodeSep, rankSep){
   Object.keys(groupIds).sort(function(a,b){ return depth(a)-depth(b) }).forEach(function(gid){
     var gn = g.node(gid)
     var pal = PAL[byId[gid].cls] || PAL.blue
-    lfGroupNodes.push({ id: gid, label: byId[gid].label, _pal: pal,
+    // 群組標題帶為固定高(GROUP_TITLE), label 內 \\n 降級為空格(兩行標題會壓到成員節點)
+    lfGroupNodes.push({ id: gid, label: String(byId[gid].label).replace(/\\n/g, ' '), _pal: pal,
       x: Math.round(gn.x), y: Math.round(gn.y), _w: Math.round(gn.width), _h: Math.round(gn.height) })
   })
 

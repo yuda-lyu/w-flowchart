@@ -8,11 +8,14 @@ import { pkgScript } from '../common/pkg.mjs'
 // mermaid@10 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
 const MERMAID_JS = pkgScript('mermaid10/dist/mermaid.min.js')
 
+// label 內 \n 強制換行 → mermaid htmlLabels 之 <br/>(字面換行在 subgraph 標題會遺失第二行)
+const nl = (s) => String(s).replace(/\n/g, '<br/>')
+
 // 把標準節點 label 轉成 mermaid 節點形狀語法(id 經 qid 消歧)
 //   diamond → {label}  / 其餘 → ["label"]
 function nodeShape(nd, qid) {
-    if (nd.cls === 'diamond') return `${qid(nd.id)}{"${nd.label}"}`
-    return `${qid(nd.id)}["${nd.label}"]`
+    if (nd.cls === 'diamond') return `${qid(nd.id)}{"${nl(nd.label)}"}`
+    return `${qid(nd.id)}["${nl(nd.label)}"]`
 }
 
 // 正規化數據 → mermaid flowchart DSL 字串
@@ -87,7 +90,8 @@ function translate(data) {
     function renderSubgraph(gid, indent) {
         const g = byId[gid]
         const lines = []
-        lines.push(`${indent}subgraph ${qid(gid)}["${g.label}"]`)
+        // mermaid10 subgraph 標題不支援 <br/>(後段遺失) → \n 降級為空格(不丟資訊)
+        lines.push(`${indent}subgraph ${qid(gid)}["${String(g.label).replace(/\n/g, ' ')}"]`)
         // 直接子節點(非容器)
         const directChildren = nodes.filter(nd => nd.group === gid && !isGroupCls(nd.cls))
         for (const nd of directChildren) {
@@ -106,7 +110,7 @@ function translate(data) {
     const edgeLines = []
     for (const ed of edges) {
         const arrow = ed.kind === 'dashed' ? '-..->' : '-->'
-        const lbl = ed.label ? `|"${ed.label}"| ` : ''
+        const lbl = ed.label ? `|"${nl(ed.label)}"| ` : ''
         edgeLines.push(`  ${qid(ed.from)} ${arrow} ${lbl}${qid(ed.to)}`)
     }
 

@@ -48,8 +48,8 @@ function injectEdgeLabelHalo(svg) {
     return svg.slice(0, p + 1) + EDGE_HALO_STYLE + svg.slice(p + 1)
 }
 
-// ── D2 escape：$ 需轉義以避免 D2 變數展開 ───────────────────────────────────
-const esc = (s) => String(s).replace(/\$/g, '\\$')
+// ── D2 escape：$ 需轉義以避免 D2 變數展開; 字面換行轉 \n 逸出序列(D2 雙引號字串不允許字面換行) ──
+const esc = (s) => String(s).replace(/\$/g, '\\$').replace(/\n/g, '\\n')
 
 // ── D2 方向映射：標準數據 dir → D2 direction 關鍵字 ─────────────────────────
 const DIR_MAP = { TB: 'down', LR: 'right', BT: 'up', RL: 'left' }

@@ -38,7 +38,8 @@ const VALIGN = { top:'TOP', center:'CENTER', bottom:'BOTTOM' }, DEF_VALIGN = 'to
 const meas = document.getElementById('meas')
 function measure(label, fs, maxW){
   const d=document.createElement('div')
-  d.style.cssText='display:inline-block;white-space:normal;overflow-wrap:break-word;word-break:normal;text-align:center;line-height:1.4;font-size:'+fs+'px;max-width:'+maxW+'px;padding:0;font-family:'+FONT
+  // white-space:pre-line: label 內 \\n 為強制換行(其餘空白照常摺疊); 與渲染端 foreignObject div 一致
+  d.style.cssText='display:inline-block;white-space:pre-line;overflow-wrap:break-word;word-break:normal;text-align:center;line-height:1.4;font-size:'+fs+'px;max-width:'+maxW+'px;padding:0;font-family:'+FONT
   d.textContent=label; meas.appendChild(d); const r=d.getBoundingClientRect(); meas.removeChild(d)
   return { w:Math.ceil(r.width), h:Math.ceil(r.height) }
 }
@@ -182,7 +183,7 @@ window.renderFig = async function(spec){
     const ORDER_OPTS = { 'elk.layered.crossingMinimization.semiInteractive':'true' }
     const hasCycle = (() => { const adj={}; spec.edges.forEach(e=>{ (adj[e.from]=adj[e.from]||[]).push(e.to) }); const st={}; const dfs=(u)=>{ st[u]=1; for(const v of (adj[u]||[])){ if(st[v]===1) return true; if(!st[v] && dfs(v)) return true } st[u]=2; return false }; return Object.keys(adj).some(u=>!st[u]&&dfs(u)) })()
     const gOpts = { 'elk.layered.nodePlacement.bk.fixedAlignment':'BALANCED', 'elk.padding':'[top=10,left=14,bottom=14,right=14]', 'elk.nodeLabels.placement':'[H_CENTER, V_TOP, INSIDE]', 'elk.algorithm':'layered', 'elk.direction':dir, 'elk.edgeRouting':'ORTHOGONAL', 'elk.hierarchyHandling':'INCLUDE_CHILDREN', 'elk.spacing.nodeNode':'28', 'elk.layered.spacing.nodeNodeBetweenLayers':'30', 'elk.spacing.edgeEdge':'22', 'elk.layered.spacing.edgeEdgeBetweenLayers':'24', ...ORDER_OPTS }
-    function elkEdge(e){ const lab = e.label ? [{ text:e.label, width: measure(e.label,EFS,300).w, height:18 }] : []; return { id:e.id, sources:[e.from], targets:[e.to], labels:lab } }
+    function elkEdge(e){ let lab=[]; if(e.label){ const m=measure(e.label,EFS,300); lab=[{ text:e.label, width:m.w, height:m.h }] } return { id:e.id, sources:[e.from], targets:[e.to], labels:lab } }
     function build(parentId, padMap, wrapAR){
       const children=[], edges=[]
       spec.groups.filter(g=>g.parent===parentId).forEach(g=>{ const sub=build(g.id, padMap, wrapAR); const gm=measure(g.label,GFS,400)
@@ -240,7 +241,7 @@ window.renderFig = async function(spec){
     groupsOut.sort((a,b)=>a.depth-b.depth).forEach(o=>{
       svg+='<rect x="'+(o.x)+'" y="'+(o.y)+'" width="'+o.w+'" height="'+o.h+'" rx="8" fill="'+o.g.fill+'" fill-opacity="0.38" stroke="'+o.g.stroke+'" stroke-width="2"/>'
       const tw=o.lbl?o.lbl.width+12:o.w, th=o.lbl?o.lbl.height+6:24, tx=o.x+Math.max(0,(o.w-tw)/2), ty=o.y+(o.lbl?o.lbl.y:5)
-      svg+='<foreignObject x="'+tx+'" y="'+ty+'" width="'+tw+'" height="'+th+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="text-align:center;font-weight:bold;font-size:'+GFS+'px;color:'+o.g.stroke+';line-height:1.3;overflow-wrap:break-word;word-break:normal">'+esc(o.g.label)+'</div></foreignObject>'
+      svg+='<foreignObject x="'+tx+'" y="'+ty+'" width="'+tw+'" height="'+th+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="text-align:center;font-weight:bold;font-size:'+GFS+'px;color:'+o.g.stroke+';line-height:1.3;white-space:pre-line;overflow-wrap:break-word;word-break:normal">'+esc(o.g.label)+'</div></foreignObject>'
     })
     // 2) 邊(在節點之下、容器之上)
     const nodeBoxById={}; nodesOut.forEach(o=>{ nodeBoxById[o.n.id]={ x:o.x, y:o.y, w:o.w, h:o.h, diamond:!!o.n.diamond } })
@@ -366,7 +367,7 @@ window.renderFig = async function(spec){
       })
       // 邊標籤(白光暈)
       ;(e.labels||[]).forEach(l=>{ if(!l.text) return; const lx=o.ox+(l.x||0), ly=o.oy+(l.y||0), lw=l.width||40, lh=l.height||18
-        svg+='<foreignObject x="'+lx+'" y="'+ly+'" width="'+(lw+6)+'" height="'+(lh+4)+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="font-size:'+EFS+'px;color:'+EDGE_TEXT+';text-shadow:0 0 3px '+HALO+',0 0 3px '+HALO+',0 0 3px '+HALO+',0 0 3px '+HALO+';white-space:nowrap">'+esc(l.text)+'</div></foreignObject>' })
+        svg+='<foreignObject x="'+lx+'" y="'+ly+'" width="'+(lw+6)+'" height="'+(lh+4)+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="font-size:'+EFS+'px;color:'+EDGE_TEXT+';text-shadow:0 0 3px '+HALO+',0 0 3px '+HALO+',0 0 3px '+HALO+',0 0 3px '+HALO+';white-space:pre-line">'+esc(l.text)+'</div></foreignObject>' })
     })
     // 3) 節點(最上)。各文字 div 之斷行 CSS(overflow-wrap:break-word + word-break:normal)須與 measure()/measureItems() 一致,
     //    否則長英文識別字量測時折行、渲染時不折 → 單行溢出 foreignObject 被裁切
@@ -379,14 +380,14 @@ window.renderFig = async function(spec){
         svg+='<path d="M '+(o.x+r)+' '+o.y+' H '+(o.x+o.w-r)+' A '+r+' '+r+' 0 0 1 '+(o.x+o.w)+' '+(o.y+r)+' V '+sep+' H '+o.x+' V '+(o.y+r)+' A '+r+' '+r+' 0 0 1 '+(o.x+r)+' '+o.y+' Z" fill="'+mix(n.fill,n.stroke,0.16)+'"/>'  // 2 標題背景(上圓角下平)
         svg+='<rect x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'" rx="'+r+'" fill="none" stroke="'+n.stroke+'" stroke-width="1.6"/>'  // 3 框線(頂層)
         svg+='<line x1="'+o.x+'" y1="'+sep+'" x2="'+(o.x+o.w)+'" y2="'+sep+'" stroke="'+n.stroke+'" stroke-width="1"/>'  // 4 分隔線
-        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+headH+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:bold;font-size:'+FS+'px;color:'+n.font+'"><div style="width:100%;min-width:0;overflow-wrap:break-word;word-break:normal">'+esc(n.title||n.label)+'</div></div></foreignObject>'  // 5 標題文字
+        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+headH+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:bold;font-size:'+FS+'px;color:'+n.font+'"><div style="width:100%;min-width:0;white-space:pre-line;overflow-wrap:break-word;word-break:normal">'+esc(n.title||n.label)+'</div></div></foreignObject>'  // 5 標題文字
         svg+='<foreignObject x="'+o.x+'" y="'+sep+'" width="'+o.w+'" height="'+(o.h-headH)+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="font-size:'+(FS-1)+'px;line-height:1.55;padding:6px 9px 4px;text-align:left;color:'+n.font+'">'+lis+'</div></foreignObject>'  // 6 items文字
       } else if(n.diamond){ const cx=o.x+o.w/2, cy=o.y+o.h/2
         svg+='<polygon points="'+cx+','+o.y+' '+(o.x+o.w)+','+cy+' '+cx+','+(o.y+o.h)+' '+o.x+','+cy+'" fill="'+n.fill+'" stroke="'+n.stroke+'" stroke-width="1.8"/>'
-        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:'+FS+'px;color:'+n.font+';line-height:1.4;padding:0 4px;box-sizing:border-box"><div style="width:100%;min-width:0;overflow-wrap:break-word;word-break:normal">'+esc(n.label)+'</div></div></foreignObject>'
+        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:'+FS+'px;color:'+n.font+';line-height:1.4;padding:0 4px;box-sizing:border-box"><div style="width:100%;min-width:0;white-space:pre-line;overflow-wrap:break-word;word-break:normal">'+esc(n.label)+'</div></div></foreignObject>'
       } else {
         svg+='<rect x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'" rx="7" fill="'+n.fill+'" stroke="'+n.stroke+'" stroke-width="1.6"/>'
-        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:'+FS+'px;color:'+n.font+';line-height:1.4;padding:0 4px;box-sizing:border-box"><div style="width:100%;min-width:0;overflow-wrap:break-word;word-break:normal">'+esc(n.label)+'</div></div></foreignObject>'
+        svg+='<foreignObject x="'+o.x+'" y="'+o.y+'" width="'+o.w+'" height="'+o.h+'"><div xmlns="http://www.w3.org/1999/xhtml" class="lbl" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;font-size:'+FS+'px;color:'+n.font+';line-height:1.4;padding:0 4px;box-sizing:border-box"><div style="width:100%;min-width:0;white-space:pre-line;overflow-wrap:break-word;word-break:normal">'+esc(n.label)+'</div></div></foreignObject>'
       }
     })
 
