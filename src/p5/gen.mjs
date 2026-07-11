@@ -5,8 +5,8 @@
 //   注意：本版 D2(0.1.33 / WASM v0.7.0) 傳入自訂 font buffer 會穩定回 "invalid JSON input"。
 //   改為不傳字型編譯，渲染為 SVG 後注入 font-family 覆寫，交由 librsvg(sharp) 以系統「Microsoft JhengHei」實際描繪。
 //   D2 v0.7 內建 CJK 全形寬度量測，box 寬即使長中文亦不溢出（已實測）。
-import { D2 } from '@terrastruct/d2'
-import sharp from 'sharp'
+// @terrastruct/d2 與 sharp 為本產線專屬重依賴, 於函式內動態載入(延遲載入):
+//   模組層載入會令「僅用其他產線」的使用者也付出載入成本, 且 d2 上游缺陷會連帶影響其他產線
 import { colorOf, isGroupCls } from '../common/palette.mjs'
 
 // ── 字型注入 ────────────────────────────────────────────────────────────────
@@ -176,6 +176,7 @@ const baseOpt = { layout: 'dagre', pad: 40, themeID: 0 }
 // D2 建構時即起常駐 worker 且無公開關閉 API（worker 為 node worker_threads 實例），
 // 若掛在模組層, 光 import 本檔就會令 caller 程序無法自然結束；故逐次建立並於 finally terminate。
 async function d2Svg(data) {
+    const { D2 } = await import('@terrastruct/d2')
     const d2inst = new D2()
     try {
         const d2src = translate(data)
@@ -193,6 +194,7 @@ async function d2Svg(data) {
 
 // ── 單張渲染 → PNG Buffer ────────────────────────────────────────────────────
 export async function genPng(data, opt = {}) {
+    const { default: sharp } = await import('sharp')
     const svg = await d2Svg(data)
     // density 通用公式：依 SVG viewBox 寬推算，讓輸出寬約落在 1600–2200px
     const m = svg.match(/viewBox="0 0 (\d+(?:\.\d+)?) (\d+(?:\.\d+)?)"/)

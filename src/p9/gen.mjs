@@ -13,12 +13,19 @@ import { pkgScript, pkgText } from '../common/pkg.mjs'
 const __dir = dirname(fileURLToPath(import.meta.url))
 // React / ReactDOM / @xyflow/react(UMD)/ @dagrejs/dagre 由本機 node_modules 內聯注入(取代 esm.sh, 斷網環境可用)
 //   replace 用函式形式回傳, 避免庫碼內 $ 序列被當作替換樣板
-const html = fs.readFileSync(`${__dir}/page9.html`, 'utf8')
-    .replace('/*__XYFLOW_CSS__*/', () => pkgText('@xyflow/react/dist/style.css'))
-    .replace('/*__REACT_JS__*/', () => pkgScript('react/umd/react.production.min.js'))
-    .replace('/*__REACT_DOM_JS__*/', () => pkgScript('react-dom/umd/react-dom.production.min.js'))
-    .replace('/*__XYFLOW_JS__*/', () => pkgScript('@xyflow/react/dist/umd/index.js'))
-    .replace('/*__DAGRE_JS__*/', () => pkgScript('@dagrejs/dagre/dist/dagre.min.js'))
+//   首次呼叫才讀檔組頁(延遲載入): 模組層即讀會令「僅用其他產線」的載入方也付出讀檔成本
+let _html = null
+function getHtml() {
+    if (_html === null) {
+        _html = fs.readFileSync(`${__dir}/page9.html`, 'utf8')
+            .replace('/*__XYFLOW_CSS__*/', () => pkgText('@xyflow/react/dist/style.css'))
+            .replace('/*__REACT_JS__*/', () => pkgScript('react/umd/react.production.min.js'))
+            .replace('/*__REACT_DOM_JS__*/', () => pkgScript('react-dom/umd/react-dom.production.min.js'))
+            .replace('/*__XYFLOW_JS__*/', () => pkgScript('@xyflow/react/dist/umd/index.js'))
+            .replace('/*__DAGRE_JS__*/', () => pkgScript('@dagrejs/dagre/dist/dagre.min.js'))
+    }
+    return _html
+}
 
 // 正規化數據 → page9.html renderFig spec
 //   標籤「不預折」, 原樣傳入, 由 page9.html 量測 div(max-width + overflow-wrap)自然折行:
@@ -47,7 +54,7 @@ export async function genPng(data, opt = {}) {
         const errs = []
         page.on('pageerror', e => errs.push(e.message))
         page.on('console', m => { if (m.type() === 'error') errs.push('c:' + m.text().slice(0, 200)) })
-        await page.setContent(html, { waitUntil: 'load' })
+        await page.setContent(getHtml(), { waitUntil: 'load' })
         await page.waitForFunction(() => document.title === 'READY' || document.title === 'FAIL', { timeout: 60000 }).catch(() => {})
         const boot = await page.evaluate(() => ({ t: document.title, err: window.__err }))
         if (boot.t !== 'READY') throw new Error('BOOT FAIL :: ' + boot.err + ' | ' + errs.slice(0, 6).join(' | '))
