@@ -2,8 +2,8 @@
 
 ## 技術核心
 
-- **繪圖庫**：mermaid 第 11 版系列（package.json 以 npm alias `mermaid11` 安裝，與 p1 之第 10 版系列並存）+ `@mermaid-js/layout-elk`。兩者皆為 chunk 式 ESM（無 UMD 版可內聯注入），改以虛擬 origin `https://pkg.local/` 供應本機 `node_modules` 檔案：`routeLocalPkgs()` 對該 page 掛 `page.route(PKG_ORIGIN + '**', ...)`，攔截後以 `fs.readFileSync(pkgFile(rel))` 讀本機檔案回應（含相對 chunk import，因同 origin 而一併被攔截解析），頁內腳本以 `await import('https://pkg.local/mermaid11/dist/mermaid.esm.min.mjs')` 等路徑動態載入；不經 CDN，斷網環境亦可運作。
-- **ELK 排版引擎**：啟動前呼叫 `mermaid.registerLayoutLoaders(elk)`，再於 frontmatter（`FM` 常數）中指定 `layout: elk`，使所有圖改由 ELK 演算法自動計算節點/邊位置，取代 mermaid 原生 Dagre。**實測事實**：舊版以 CDN `+esm` 載入 `@mermaid-js/layout-elk` 時，`registerLayoutLoaders` 會靜默失效並悄悄退回 dagre 版面（無錯誤訊息）；改為現行本機 ESM chunk 載入後，才確實套用 ELK 排版。
+- **繪圖庫**：mermaid 第 11 版系列（與 p1 之第 10 版系列版本各自獨立鎖定，見 `src/common/cdn.mjs`）+ `@mermaid-js/layout-elk`。兩者皆為 chunk 式 ESM（無 UMD 版可內聯注入），改由 jsDelivr CDN 直接以 ESM `import()` 動態載入：頁內腳本以 `await import('https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.esm.min.mjs')` 等 jsDelivr 網址載入（相對 chunk import 由 jsDelivr 循同 origin 自動解析）；渲染時需連網存取 CDN。
+- **ELK 排版引擎**：啟動前呼叫 `mermaid.registerLayoutLoaders(elk)`，再於 frontmatter（`FM` 常數）中指定 `layout: elk`，使所有圖改由 ELK 演算法自動計算節點/邊位置，取代 mermaid 原生 Dagre。**實測事實**：舊版以 CDN `+esm`（esm.sh 轉換端點）載入 `@mermaid-js/layout-elk` 時，`registerLayoutLoaders` 會靜默失效並悄悄退回 dagre 版面（無錯誤訊息）；改為現行直接載入 jsDelivr 提供之 dist ESM 檔後，才確實套用 ELK 排版。
 - **渲染方式**：透過 `mermaid.render('g'+idx, code)` 在頁內取得 SVG 字串，注入 `#box` div，再呼叫 `page.locator('#box svg').screenshot()` 對 SVG 元素精確截圖，回傳 PNG Buffer（不落地寫檔）。
 - **解析度**：`browser.newPage({ deviceScaleFactor: 2 })` 讓截圖以 2× 像素密度渲染，輸出圖像像素尺寸為 SVG 邏輯尺寸的兩倍。
 - **SVG 尺寸固定**：`renderFig` 內先讀 `viewBox.baseVal` 取 `w`/`h`，若取不到則 fallback 至 `svgEl.getBBox()`，再以 `setAttribute('width', Math.ceil(w))` / `setAttribute('height', Math.ceil(h))` 鎖定尺寸，防止截圖留白。

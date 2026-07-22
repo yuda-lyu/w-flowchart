@@ -5,10 +5,9 @@
 //   原則: 字型全 JhengHei; 群組容器由 ELK 正確包住成員(不逃逸); 緊湊; 中文不爆框; 邊標籤白光暈不遮線。
 import { chromium } from 'playwright'
 import { colorOf, isGroupCls, EDGE } from '../common/palette.mjs'
-import { pkgScript } from '../common/pkg.mjs'
+import { cdnScript } from '../common/cdn.mjs'
 
-// elkjs 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
-const ELK_JS = pkgScript('elkjs/lib/elk.bundled.js')
+// elkjs 由 jsDelivr CDN 載入(免安裝; 版本鎖定見 common/cdn.mjs)
 
 // 正規化數據 → spec(節點/群組(可巢狀)/邊)
 export function translate(data) {
@@ -24,7 +23,7 @@ export function translate(data) {
 }
 
 export const PAGE_HTML = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-<script>${ELK_JS}</script>
+${cdnScript('elkjs')}
 <style>body{margin:0;background:#fff} .lbl{font-family:'Microsoft JhengHei','微軟正黑體',sans-serif}</style>
 </head><body>
 <div id="meas" style="position:absolute;left:-99999px;top:0;font-family:'Microsoft JhengHei',sans-serif;visibility:hidden"></div>

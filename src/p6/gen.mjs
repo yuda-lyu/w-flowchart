@@ -12,14 +12,11 @@
 //          若緊湊間距下仍有節點互疊且非 z-order 可解, 則保持緊湊留下重疊(代表此套不適合此圖, 由挑選階段換別套)。
 import { chromium } from 'playwright'
 import { colorOf, isGroupCls, EDGE, FONT } from '../common/palette.mjs'
-import { pkgScript } from '../common/pkg.mjs'
+import { cdnScript } from '../common/cdn.mjs'
 
-// G6 v5 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
-const G6_JS = pkgScript('@antv/g6/dist/g6.min.js')
+// G6 v5 由 jsDelivr CDN 載入(免安裝; 版本鎖定見 common/cdn.mjs)
 // genSvg 專用:@antv/g-svg renderer(取代預設 canvas renderer, 產出 SVG DOM)。
 //   依賴 @antv/g-lite UMD(暴露全域 window.G)須先於 g-svg UMD 載入(g-svg UMD 讀取既有 window.G 掛載 window.G.SVG)。
-const G_LITE_JS = pkgScript('@antv/g-lite/dist/index.umd.min.js')
-const G_SVG_JS = pkgScript('@antv/g-svg/dist/index.umd.min.js')
 
 // ===== 通用排版常數(全圖共用, 無逐圖客製) =====
 const CANVAS = 2200          // 大畫布:給足夠空間, 配合 autoFit:'view' 自動縮放, 不逐圖設 w/h
@@ -134,7 +131,7 @@ function translate(data) {
 //   原則2:combo.style.zIndex 墊底、edge.style.zIndex 最上層(於 translate 各元素已設, graph 預設再兜底)。
 //   原則3:固定緊湊 nodesep/ranksep, 無碰撞偵測掃描放大。
 const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-<script>${G6_JS}</script>
+${cdnScript('g6')}
 </head><body style="margin:0;background:#fff">
 <div id="g6" style="background:#fff"></div>
 <script>
@@ -201,9 +198,9 @@ export async function genPng(data, opt = {}) {
 //   換用 @antv/g-svg renderer(取代預設 canvas renderer)產出 SVG DOM, 其餘 translate/layout/樣式邏輯
 //   (dagre 排版、緊湊間距、z-order、字型)與 genPng 完全共用, 故版面結構/顏色/文字與 PNG 版一致。
 const htmlSvg = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-<script>${G_LITE_JS}</script>
-<script>${G_SVG_JS}</script>
-<script>${G6_JS}</script>
+${cdnScript('g-lite')}
+${cdnScript('g-svg')}
+${cdnScript('g6')}
 </head><body style="margin:0;background:#fff">
 <div id="g6" style="background:#fff"></div>
 <script>

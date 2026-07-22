@@ -2,8 +2,8 @@
 
 ## 技術核心
 
-- **繪圖庫**：`@joint/core`（JointJS）搭配 `dagre`，由 `common/pkg.mjs` 的 `pkgScript()` 讀取本機 `node_modules/@joint/core/dist/joint.min.js` 與 `node_modules/dagre/dist/dagre.min.js` 內容，內聯注入 Playwright 頁內 `<script>` 標籤（取代 CDN，斷網環境可用）。
-- **載入方式**：Node 端以 Playwright 的 `page.setContent(html)` 建立含兩段內聯 `<script>` 的完整 HTML 頁，等候 `window.__ready` 旗標確認兩套庫皆就緒後，再透過 `page.evaluate()` 驅動頁內 JavaScript 函式進行排版與渲染。
+- **繪圖庫**：`@joint/core`（JointJS）搭配 `dagre`，改由 jsDelivr CDN 載入（免安裝），於 Playwright 頁內以外部 `<script src>` 標籤（`cdnScript('joint')`、`cdnScript('dagre')`，版本鎖定於 `src/common/cdn.mjs`）載入；渲染時需連網存取 CDN。
+- **載入方式**：Node 端以 Playwright 的 `page.setContent(html)` 建立含兩段外部 `<script src>` 的完整 HTML 頁，等候 `window.__ready` 旗標確認兩套庫皆就緒後，再透過 `page.evaluate()` 驅動頁內 JavaScript 函式進行排版與渲染。
 - **渲染方式**：排版完成後以 `P.fitToContent({ padding: 28, allowNewOrigin: 'any', useModelGeometry: true })` 讓 JointJS Paper 自適應內容邊界，截圖目標為 `#paper svg`（`page.$('#paper svg').screenshot()`），直接輸出 PNG。
 - **解析度**：`browser.newPage({ deviceScaleFactor: 2 })` 以 2 倍像素密度開頁，截出的 PNG 實際像素為邏輯尺寸的兩倍，保有高清品質。
 - **字型**：頁內使用 `Microsoft JhengHei`（微軟正黑體）作為主字型，canvas 量測與 JointJS 渲染均使用同一 `FONT` 字串，確保量測結果與渲染結果一致。

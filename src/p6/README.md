@@ -2,7 +2,7 @@
 
 ## 技術核心
 
-- **繪圖庫**：`@antv/g6@5`，由本機 `node_modules/@antv/g6/dist/g6.min.js`（`common/pkg.mjs` 的 `pkgScript()` 讀取檔案內容）內聯注入 Playwright 頁面的 `<script>` 執行，取代舊版 CDN 載入，斷網環境亦可執行。`@antv/g6` 仍是套件 `dependencies` 之一（供 `node_modules` 內取得 dist 檔），但 Node 執行期不以 `import` 方式使用它，僅頁面內 `<script>` 使用其全域 `G6`。
+- **繪圖庫**：`@antv/g6@5`，改由 jsDelivr CDN 載入（免安裝），於 Playwright 頁面內以外部 `<script src>` 標籤（`cdnScript('g6')`，版本鎖定於 `src/common/cdn.mjs`）載入執行，渲染時需連網存取 CDN。`@antv/g6` 已從套件 `dependencies` 移除，Node 執行期亦不以 `import` 方式使用它，僅頁面內 `<script>` 取用其全域 `G6`。
 - **渲染方式**：以 `chromium.launch()` 開啟無頭瀏覽器，`page.setContent(html)` 載入內嵌 G6 頁面，於頁面內呼叫 `window.renderFig()`，以 `G6.Graph` + `layout: { type:'antv-dagre' }` 完成排版與渲染。
 - **截圖／輸出**：呼叫 `graph.toDataURL({ mode:'overall' })` 取得整圖 DataURL（非 viewport 截圖），透過 `window.snap()` 取回後在 Node 端解 base64，組成 `Buffer` 回傳（不寫檔）。
 - **解析度**：`browser.newPage({ deviceScaleFactor: 2 })`，輸出為 2× 實體像素解析度的 PNG。

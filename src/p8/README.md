@@ -2,8 +2,8 @@
 
 ## 技術核心
 
-- **繪圖庫**：`@logicflow/core`（含 CSS）搭配 `dagre`，由 `common/pkg.mjs` 讀取本機檔案內聯注入 Playwright 頁內（取代 CDN，斷網環境可用）：`pkgText('@logicflow/core/dist/index.css')` 內聯進 `<style>`，`pkgScript('@logicflow/core/dist/index.min.js')` 與 `pkgScript('dagre/dist/dagre.min.js')` 各自內聯進 `<script>`。
-- **載入方式**：Node 端以 Playwright 建立 Chromium 頁面，將完整 HTML 字串（含內聯 CSS 與兩段內聯 `<script>`）透過 `page.setContent()` 注入；繪圖邏輯全部在頁內 `<script>` 執行，Node 端僅負責驅動與截圖。
+- **繪圖庫**：`@logicflow/core`（含 CSS）搭配 `dagre`，改由 jsDelivr CDN 載入（免安裝）：`cdnStyle('logicflow-css')` 以外部 `<link>` 載入 CSS，`cdnScript('logicflow')` 與 `cdnScript('dagre')` 各自以外部 `<script src>` 載入（版本鎖定於 `src/common/cdn.mjs`）；渲染時需連網存取 CDN。
+- **載入方式**：Node 端以 Playwright 建立 Chromium 頁面，將完整 HTML 字串（含外部 CSS `<link>` 與兩段外部 `<script src>`）透過 `page.setContent()` 注入；繪圖邏輯全部在頁內 `<script>` 執行，Node 端僅負責驅動與截圖。
 - **渲染與截圖**：頁內 `window.renderFig(fig)` 依序計算尺寸 → dagre 排版 → `lf.render()` 渲染完後以 `setTimeout(..., 200)` 等待 DOM 穩定，回傳 Promise；Node 端再呼叫 `page.evaluate(() => document.fonts.ready)` 確保字型載入完畢，最後以 `page.locator('#app').screenshot()` 截取 `#app` 元素為 PNG Buffer 回傳（不寫檔）。
 - **解析度**：`browser.newPage({ deviceScaleFactor: 2 })`，輸出為 2× 實體像素密度（HiDPI），寬高由計算所得邏輯像素乘以 2 輸出。
 - **調用方式**：本模組匯出 `genPng(data, opt) → Promise<Buffer>` 與 `genSvg(data, opt) → Promise<string>`，輸入皆為正規化繪圖數據 `{ dir, nodes, edges }`；`genSvg` 序列化圖面 svg（`lf-canvas-overlay`），並將 LogicFlow CSS 內嵌進 SVG（文字自動換行之 `foreignObject` 標籤樣式依賴此 CSS）；由 `src/WFlowchart.mjs` 統一匯入並依 `p8` 鍵值調用，本身不寫檔、不涉及批次流程。

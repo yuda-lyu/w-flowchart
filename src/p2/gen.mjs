@@ -3,24 +3,11 @@
 //   版面通用化: dir 取自 data.dir; 子群組方向自動取補方向; classDef/顏色取自 palette;
 //   無逐圖魔術數字, ELK 全自動排版。
 import { chromium } from 'playwright'
-import fs from 'fs'
 import { PALETTE, isGroupCls } from '../common/palette.mjs'
-import { pkgFile } from '../common/pkg.mjs'
+import { cdnUrl } from '../common/cdn.mjs'
 
-// mermaid@11 與 layout-elk 為 chunk 式 ESM(無 UMD 可內聯), 改以虛擬 origin 提供本機 node_modules 檔案
-//   (page.route 攔截 https://pkg.local/**, fs 直讀回應; 相對 chunk import 亦循同 origin 解析; 斷網環境可用)
-const PKG_ORIGIN = 'https://pkg.local/'
-async function routeLocalPkgs(page) {
-    await page.route(PKG_ORIGIN + '**', (route) => {
-        const rel = decodeURIComponent(route.request().url().slice(PKG_ORIGIN.length).split('?')[0])
-        try {
-            route.fulfill({ body: fs.readFileSync(pkgFile(rel)), contentType: rel.endsWith('.css') ? 'text/css' : 'text/javascript' })
-        }
-        catch (err) {
-            route.fulfill({ status: 404, body: String(err && err.message || err) })
-        }
-    })
-}
+// mermaid@11 與 layout-elk 為 chunk 式 ESM, 由 jsDelivr CDN 以 import() 動態載入(免安裝; 版本鎖定見 common/cdn.mjs)
+//   (相對 chunk import 由 jsDelivr 循同 origin 自動解析)
 
 const FM = `---\nconfig:\n  layout: elk\n---\n`
 
@@ -151,8 +138,8 @@ const setup = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
 <div id="box" style="display:inline-block;padding:24px"></div>
 <script type="module">
 try {
-  const mermaid = (await import('https://pkg.local/mermaid11/dist/mermaid.esm.min.mjs')).default
-  const elk = (await import('https://pkg.local/@mermaid-js/layout-elk/dist/mermaid-layout-elk.esm.min.mjs')).default
+  const mermaid = (await import('${cdnUrl('mermaid11-esm')}')).default
+  const elk = (await import('${cdnUrl('layout-elk-esm')}')).default
   mermaid.registerLayoutLoaders(elk)
   mermaid.initialize({ startOnLoad:false, theme:'base', flowchart:{ useMaxWidth:false }, themeVariables:{ fontFamily:"'微軟正黑體','Microsoft JhengHei',sans-serif", fontSize:'17px', primaryColor:'#eef4fb', primaryBorderColor:'#3f6fb0', lineColor:'#44505a', primaryTextColor:'#1c2b36' } })
   window.renderFig = async (code, idx) => {
@@ -208,7 +195,6 @@ async function renderFigPage(data) {
     const browser = await chromium.launch()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
-        await routeLocalPkgs(page)
         await page.setContent(setup, { waitUntil: 'load' })
         await page.waitForFunction(() => window.__ready || window.__setupErr, { timeout: 90000 }).catch(() => {})
         const setupErr = await page.evaluate(() => window.__setupErr)

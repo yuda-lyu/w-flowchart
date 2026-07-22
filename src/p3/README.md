@@ -2,7 +2,7 @@
 
 ## 技術核心
 
-- **繪圖庫**：nomnoml（`nomnoml/dist/nomnoml.js`），與其相依 `graphre`（`graphre/dist/graphre.js`）由本機 `node_modules` 讀出後內聯注入頁面 `<script>`（`common/pkg.mjs` 的 `pkgScript()`），非透過 CDN，斷網環境亦可渲染；nomnoml UMD 模組依賴全域 `graphre`，注入順序須 graphre 先於 nomnoml。npm 版 nomnoml 之佈局由套件自宣告相依的 graphre 驅動，與舊版 CDN bundle（`nomnoml.web.js`，內部改捆 `@dagrejs/dagre`）佈局引擎不同，兩者排版結果可能略有差異。
+- **繪圖庫**：nomnoml（`nomnoml/dist/nomnoml.js`），與其相依 `graphre`（`graphre/dist/graphre.js`）改由 jsDelivr CDN 載入（免安裝），於頁面內以外部 `<script src>` 標籤（`cdnScript()`，版本鎖定於 `src/common/cdn.mjs`）依序載入；nomnoml UMD 模組依賴全域 `graphre`，載入順序須 graphre 先於 nomnoml。npm 版 nomnoml 之佈局由套件自宣告相依的 graphre 驅動，與舊版 CDN bundle（`nomnoml.web.js`，內部改捆 `@dagrejs/dagre`）佈局引擎不同，兩者排版結果可能略有差異。
 - **渲染方式**：於頁面注入 `window.renderAndDetect(src)` 函式，呼叫 `window.nomnoml.renderSvg(src)` 將 DSL 字串渲染為 SVG，並將結果寫入 `#box` div 的 innerHTML。
 - **截圖目標**：以 Playwright locator `#box svg` 精確擷取 SVG 元素本身，排除頁面邊距干擾。
 - **解析度**：啟動 `browser.newPage({ deviceScaleFactor: 2 })`，輸出為 2× 實體像素的高解析度 PNG。
@@ -95,5 +95,5 @@ nomnoml 不為邊標籤畫底色（邊標籤背景透明），緊湊間距下邊
 - **無原生群組容器框**：改以「容器→成員」關聯邊表達歸屬（見上），視覺上無實體容器外框，僅靠共用色相辨識群組邊界，不若原生 compound graph 直觀。
 - **線性鏈被拉長**：對節點數多且為線性序列的圖（如長流程鏈），nomnoml 可能把畫布拉得很長，碰撞偵測的間距調整無法改善長寬比。
 - **碰撞偵測上限**：掃描序列最大值為 85px，若在此間距下仍有碰撞（如標籤極長或節點極密），會以殘留碰撞數最少者輸出。
-- **本機套件相依**：nomnoml／graphre 由本機 `node_modules` 讀出內聯注入，需先完成 `npm install`；執行環境本身不需連網。
+- **CDN 相依**：nomnoml／graphre 改由 jsDelivr CDN 載入，免 `npm install`；執行環境須連網始能渲染。
 </content>

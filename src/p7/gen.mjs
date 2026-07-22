@@ -3,11 +3,9 @@
 //   版面通用化: rankDir 取自數據 dir; nodesep/ranksep/GPAD/換行寬度 皆為通用常數或依標籤字寬/行數自動推算, 無逐圖魔術數字。
 import { chromium } from 'playwright'
 import { PALETTE } from '../common/palette.mjs'
-import { pkgScript } from '../common/pkg.mjs'
+import { cdnScript } from '../common/cdn.mjs'
 
-// @joint/core + dagre 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
-const JOINT_JS = pkgScript('@joint/core/dist/joint.min.js')
-const DAGRE_JS = pkgScript('dagre/dist/dagre.min.js')
+// @joint/core + dagre 由 jsDelivr CDN 載入(免安裝; 版本鎖定見 common/cdn.mjs)
 
 // CLS(JointJS 內部樣式表)由共用色票 PALETTE 推導: fill/stroke/text→color; diamond 帶 shape; *G/*G2 帶 group:true
 const CLS = Object.fromEntries(Object.entries(PALETTE).map(([cls, p]) => {
@@ -28,8 +26,8 @@ function translate(data) {
 }
 
 const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-<script>${JOINT_JS}</script>
-<script>${DAGRE_JS}</script>
+${cdnScript('joint')}
+${cdnScript('dagre')}
 </head><body style="margin:0;background:#fff">
 <div id="paper" style="background:#fff"></div>
 <script>

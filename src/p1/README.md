@@ -2,7 +2,7 @@
 
 ## 技術核心
 
-- **繪圖庫**: mermaid 第 10 版系列（package.json 以 npm alias `mermaid10` 安裝，與 p2 之第 11 版系列並存），透過 `common/pkg.mjs` 的 `pkgScript('mermaid10/dist/mermaid.min.js')` 讀取本機 `node_modules` 內容並內聯注入 `<script>` 標籤，於 Playwright 開啟的 Chromium 頁面內執行；不經 CDN，斷網環境亦可運作。
+- **繪圖庫**: mermaid 第 10 版系列（與 p2 之第 11 版系列版本各自獨立鎖定，見 `src/common/cdn.mjs`），改由 jsDelivr CDN 載入（免安裝），於 Playwright 開啟的 Chromium 頁面內以外部 `<script src>` 標籤（`cdnScript('mermaid10')`）載入執行；渲染時需連網存取 CDN。
 - **渲染方式**: 內部 `renderFigPage()` 為每次渲染建立獨立的 Playwright `page`（`browser.newPage()`），避免 mermaid 內部 render id 衝突。將 `mermaidHtml()` 產生的 HTML 字串以 `page.setContent()` 注入，等待 `document.title === 'DONE'` 確認渲染完成（或 `FAIL` 時拋出錯誤），再以 `page.waitForFunction` 超時 30 秒防呆。
 - **截圖目標**: `page.locator('#box svg').screenshot()`，只截 SVG 元素本身，不含外層 `div#box` 的 padding 背景。
 - **解析度**: `deviceScaleFactor: 4`，Chromium 以 4 倍畫素密度渲染 SVG 向量圖，輸出 PNG 清晰度極高，適合印刷品質報告。

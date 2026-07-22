@@ -2,13 +2,9 @@
 //   genPng(data): 正規化繪圖數據 → 轉 cytoscape els → dagre 自動排版渲染 → 回傳 PNG Buffer
 //   版面通用化: rankDir 取自數據 dir; nodeSep/rankSep 為通用常數; full:true + 自動尺寸, 無逐圖魔術數字。
 import { chromium } from 'playwright'
-import { pkgScript } from '../common/pkg.mjs'
+import { cdnScript } from '../common/cdn.mjs'
 
-// cytoscape + dagre + cytoscape-dagre + cytoscape-svg 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
-const CYTOSCAPE_JS = pkgScript('cytoscape/dist/cytoscape.min.js')
-const DAGRE_JS = pkgScript('dagre/dist/dagre.min.js')
-const CYTOSCAPE_DAGRE_JS = pkgScript('cytoscape-dagre/dist/cytoscape-dagre.js')
-const CYTOSCAPE_SVG_JS = pkgScript('cytoscape-svg/cytoscape-svg.js')
+// cytoscape + dagre + cytoscape-dagre + cytoscape-svg 由 jsDelivr CDN 載入(免安裝; 版本鎖定見 common/cdn.mjs)
 
 // 正規化數據 → cytoscape elements(節點帶 parent=group; 邊 dashed→classes）
 function toEls(data) {
@@ -39,10 +35,10 @@ const style = `[
 ]`
 
 const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-<script>${CYTOSCAPE_JS}</script>
-<script>${DAGRE_JS}</script>
-<script>${CYTOSCAPE_DAGRE_JS}</script>
-<script>${CYTOSCAPE_SVG_JS}</script>
+${cdnScript('cytoscape')}
+${cdnScript('dagre')}
+${cdnScript('cytoscape-dagre')}
+${cdnScript('cytoscape-svg')}
 </head><body style="margin:0;background:#fff">
 <div id="cy" style="width:1400px;height:1400px;background:#fff"></div>
 <script>

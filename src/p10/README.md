@@ -4,7 +4,7 @@ p1~p9 為現成繪圖套件;**p10 是唯一「自寫 SVG 渲染器」產線**:�
 
 ## 技術核心
 
-- **佈局引擎**:`elkjs`(Eclipse Layout Kernel 的 JS 版,`elk.bundled.js` UMD 主執行緒、免 worker),由本機 `node_modules` 讀出後於 `gen.mjs` 模組載入時以 `common/pkg.mjs` 的 `pkgScript` 內聯注入 `PAGE_HTML`(取代 CDN,斷網環境可用),於 Playwright headless 頁內執行。`new ELK().layout(graph)` 回傳各節點/容器之座標尺寸與各邊之 sections(轉折點)。
+- **佈局引擎**:`elkjs`(Eclipse Layout Kernel 的 JS 版,`elk.bundled.js` UMD 主執行緒、免 worker),改由 jsDelivr CDN 載入(免安裝),於 `gen.mjs` 模組載入時以 `common/cdn.mjs` 的 `cdnScript` 組入 `PAGE_HTML` 之外部 `<script src>` 標籤(版本鎖定於 `src/common/cdn.mjs`),於 Playwright headless 頁內執行;渲染時需連網存取 CDN。`new ELK().layout(graph)` 回傳各節點/容器之座標尺寸與各邊之 sections(轉折點)。
 - **渲染**:本產線**自行把 ELK 結果組成 SVG 字串**(rect / polygon 菱形 / path 折線 + 箭頭 / foreignObject 文字),插入頁面後對 `#stage svg` 截圖。`deviceScaleFactor:2`。中文以 `foreignObject` 內 div 渲染(瀏覽器原生量字、不爆框)。
 - **呼叫入口**:`export async function genPng(data, opt = {})` 與 `export async function genSvg(data, opt = {})` 為對外介面,`genPng` 回傳 `Promise<Buffer>`(PNG),`genSvg` 回傳本產線自組之 standalone SVG 字串(`#stage` 內容,`&nbsp;` 正規化為 `&#160;`);由 `src/WFlowchart.mjs` 之 `GENS.p10` 統一調用(`mode: 'p10'`)。`data` 為正規化繪圖數據 `{ dir, nodes, edges }`;`opt` 保留擴充,目前原樣接收但未使用。`gen.mjs` 另外 `export function translate` 與 `export const PAGE_HTML`,供 `test/`(結構不變量 + 快照回歸測試)重用真實管線(不複製渲染器)。
 

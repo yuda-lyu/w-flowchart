@@ -3,10 +3,9 @@
 //   自動排版: mermaid dagre 自行排版, 無任何逐圖魔術數字。
 import { chromium } from 'playwright'
 import { PALETTE, isGroupCls } from '../common/palette.mjs'
-import { pkgScript } from '../common/pkg.mjs'
+import { cdnScript } from '../common/cdn.mjs'
 
-// mermaid@10 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
-const MERMAID_JS = pkgScript('mermaid10/dist/mermaid.min.js')
+// mermaid@10 由 jsDelivr CDN 載入(免安裝; 版本鎖定見 common/cdn.mjs)
 
 // label 內 \n 強制換行 → mermaid htmlLabels 之 <br/>(字面換行在 subgraph 標題會遺失第二行)
 const nl = (s) => String(s).replace(/\n/g, '<br/>')
@@ -139,7 +138,7 @@ function translate(data) {
 // 修正 B: 英數識別字不攔腰斷(word-break:normal; overflow-wrap:break-word)
 function mermaidHtml(code) {
     return `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-<script>${MERMAID_JS}</script>
+${cdnScript('mermaid10')}
 </head><body style="margin:0;background:#fff;font-family:'微軟正黑體','Microsoft JhengHei',sans-serif">
 <div id="box" style="display:inline-block;padding:24px"></div>
 <script>

@@ -2,7 +2,7 @@
 
 ## 技術核心
 
-- **繪圖庫**：Cytoscape.js（`cytoscape/dist/cytoscape.min.js`）搭配 dagre 排版引擎（`dagre/dist/dagre.min.js`）與橋接外掛（`cytoscape-dagre/dist/cytoscape-dagre.js`），三者由本機 `node_modules` 讀出後內聯注入頁面 `<script>`（`common/pkg.mjs` 的 `pkgScript()`），非透過 CDN，斷網環境亦可渲染。
+- **繪圖庫**：Cytoscape.js（`cytoscape/dist/cytoscape.min.js`）搭配 dagre 排版引擎（`dagre/dist/dagre.min.js`）與橋接外掛（`cytoscape-dagre/dist/cytoscape-dagre.js`），三者改由 jsDelivr CDN 載入（免安裝），於頁面內以外部 `<script src>` 標籤（`cdnScript()`，版本鎖定於 `src/common/cdn.mjs`）依序載入；渲染時需連網存取 CDN。
 - **渲染環境**：由 Playwright `chromium.launch()` 開啟無頭瀏覽器，`page.setContent()` 注入含三段內聯 script 的靜態 HTML，頁面掛載一個 `1400×1400px` 的 `<div id="cy">` 作為 Cytoscape 容器。
 - **截圖與匯出**：排版完成後呼叫 `cy.png({ full:true, scale:2, bg:'#ffffff', output:'base64' })` 取得 base64 字串，存入全域變數 `window.__png`，再由 `page.evaluate()` 讀回 Node 端，以 `Buffer.from(b64, 'base64')` 轉為 PNG Buffer 回傳。`full:true` 使輸出範圍自動裁切至實際元素範圍，`scale:2` 使最終 PNG 解析度為實際佈局尺寸的 2 倍；`deviceScaleFactor` 設為 `1`（由 `browser.newPage({ deviceScaleFactor:1 })` 指定），縮放完全由 `cy.png` 的 `scale:2` 控制。
 - **呼叫方式**：`genPng(data, opt)` 為單張渲染函式，接受正規化繪圖數據 `{ dir, nodes, edges }`，內部自建 browser/page 並於結束時關閉，回傳 PNG 的 Node Buffer（不落地檔案），由 `src/WFlowchart.mjs` 統一調用（`mode: 'p4'`）；同結構之 `genSvg(data, opt)` 經 `cytoscape-svg` 外掛將同一份佈局/樣式匯出為 SVG 字串（canvas 引擎重繪為 SVG，經像素級忠實度驗證）。
@@ -80,5 +80,5 @@ dagre layout 使用三個通用常數，**不因圖而異**：
 - **diamond 節點在群組容器內偏大**：`diamond` cls 固定使用 `padding:34px` 以撐開菱形可視範圍，在小型群組容器內可能撐爆容器邊界。
 - **跨容器邊路由**：Cytoscape compound node 下，跨群組的邊由 dagre 自動路由，部分情況下路由線會穿越容器框線，視覺上不夠乾淨，但功能正確。
 - **無碰撞偵測迴圈**：版面為單次 dagre 計算，若節點數量極多、標籤極長，可能出現節點標籤截斷（超出 `text-max-width:360px`）或節點互疊，無自動調整機制。
-- **本機套件相依**：cytoscape／dagre／cytoscape-dagre 由本機 `node_modules` 讀出內聯注入，需先完成 `npm install`；執行環境本身不需連網。
+- **CDN 相依**：cytoscape／dagre／cytoscape-dagre 改由 jsDelivr CDN 載入，免 `npm install`；執行環境須連網始能渲染。
 </content>

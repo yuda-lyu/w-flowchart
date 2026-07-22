@@ -8,21 +8,21 @@ import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import fs from 'fs'
 
-import { pkgScript, pkgText } from '../common/pkg.mjs'
+import { cdnScript, cdnStyle } from '../common/cdn.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
-// React / ReactDOM / @xyflow/react(UMD)/ @dagrejs/dagre 由本機 node_modules 內聯注入(取代 esm.sh, 斷網環境可用)
-//   replace 用函式形式回傳, 避免庫碼內 $ 序列被當作替換樣板
+// React / ReactDOM / @xyflow/react(UMD, 含 css)/ @dagrejs/dagre 由 jsDelivr CDN 載入(免安裝; 版本鎖定見 common/cdn.mjs)
+//   將 page9.html 內各佔位標籤整段換成外部 <script src>/<link>(非 async, 保留文件順序執行)
 //   首次呼叫才讀檔組頁(延遲載入): 模組層即讀會令「僅用其他產線」的載入方也付出讀檔成本
 let _html = null
 function getHtml() {
     if (_html === null) {
         _html = fs.readFileSync(`${__dir}/page9.html`, 'utf8')
-            .replace('/*__XYFLOW_CSS__*/', () => pkgText('@xyflow/react/dist/style.css'))
-            .replace('/*__REACT_JS__*/', () => pkgScript('react/umd/react.production.min.js'))
-            .replace('/*__REACT_DOM_JS__*/', () => pkgScript('react-dom/umd/react-dom.production.min.js'))
-            .replace('/*__XYFLOW_JS__*/', () => pkgScript('@xyflow/react/dist/umd/index.js'))
-            .replace('/*__DAGRE_JS__*/', () => pkgScript('@dagrejs/dagre/dist/dagre.min.js'))
+            .replace('<style>/*__XYFLOW_CSS__*/</style>', () => cdnStyle('xyflow-css'))
+            .replace('<script>/*__REACT_JS__*/</script>', () => cdnScript('react'))
+            .replace('<script>/*__REACT_DOM_JS__*/</script>', () => cdnScript('react-dom'))
+            .replace('<script>/*__XYFLOW_JS__*/</script>', () => cdnScript('xyflow'))
+            .replace('<script>/*__DAGRE_JS__*/</script>', () => cdnScript('dagrejs-dagre'))
     }
     return _html
 }

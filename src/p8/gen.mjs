@@ -5,12 +5,9 @@
 //   邊標籤(全域修正 A): 背景透明(不遮轉折線) + 文字加白色光暈(SVG paint-order:stroke + stroke=白 stroke-width≈3.5)。
 import { chromium } from 'playwright'
 import { PALETTE, EDGE, FONT, colorOf } from '../common/palette.mjs'
-import { pkgScript, pkgText } from '../common/pkg.mjs'
+import { cdnScript, cdnStyle, cdnFetchText } from '../common/cdn.mjs'
 
-// @logicflow/core(js+css)+ dagre 由本機 node_modules 內聯注入(取代 CDN, 斷網環境可用)
-const LOGICFLOW_CSS = pkgText('@logicflow/core/dist/index.css')
-const LOGICFLOW_JS = pkgScript('@logicflow/core/dist/index.min.js')
-const DAGRE_JS = pkgScript('dagre/dist/dagre.min.js')
+// @logicflow/core(js+css)+ dagre 由 jsDelivr CDN 載入(免安裝; 版本鎖定見 common/cdn.mjs)
 
 // 正規化數據(dir/nodes/edges) → LF 內部結構: nodes 用 parent 表群組歸屬; edges 用 source/target/dashed。
 //   套色: 由 cls 查 PALETTE(group 類別自動為淺底容器); 形狀: diamond→決策菱形, 其餘→矩形; dir→dagre rankDir; kind:dashed→虛線。
@@ -27,9 +24,9 @@ const PAL_JSON = JSON.stringify(PAL)
 const EDGE_JSON = JSON.stringify(EDGE)
 
 const html = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-<style>${LOGICFLOW_CSS}</style>
-<script>${LOGICFLOW_JS}</script>
-<script>${DAGRE_JS}</script>
+${cdnStyle('logicflow-css')}
+${cdnScript('logicflow')}
+${cdnScript('dagre')}
 <style>
   * { font-family: ${FONT}; }
   html,body{ margin:0; background:#fff; }
@@ -444,8 +441,10 @@ export async function genSvg(data, opt = {}) {
             .replace('height="100%"', `height="${res.h}"`)
         openTag = openTag.replace(/>$/, ` viewBox="0 0 ${res.w} ${res.h}">`)
         svg = openTag + svg.slice(openTagMatch[0].length)
-        // 嵌入 CSS(LOGICFLOW_CSS + 頁內字型規則) + 白底(比照 #app 背景), 使脫離頁面仍忠實呈現
-        const inject = `<style>${LOGICFLOW_CSS}\n* { font-family: ${FONT}; }</style>`
+        // 嵌入 CSS(LogicFlow CSS + 頁內字型規則) + 白底(比照 #app 背景), 使脫離頁面仍忠實呈現
+        //   LogicFlow CSS 由 CDN 取回文字內容內嵌(免安裝; 與頁面 <link> 同一版本, 內容一致)
+        const logicflowCss = await cdnFetchText('logicflow-css')
+        const inject = `<style>${logicflowCss}\n* { font-family: ${FONT}; }</style>`
             + `<rect x="0" y="0" width="${res.w}" height="${res.h}" fill="#fff"></rect>`
         svg = svg.replace('<g transform', inject + '<g transform')
         svg = svg.replace(/&nbsp;/g, '&#160;')

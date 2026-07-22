@@ -15,12 +15,10 @@
 //       參照 → 單一連通圖、零重複節點。
 import { chromium } from 'playwright'
 import { PALETTE, EDGE } from '../common/palette.mjs'
-import { pkgScript } from '../common/pkg.mjs'
+import { cdnScript } from '../common/cdn.mjs'
 
-// nomnoml(與其相依 graphre)由本機 node_modules 內聯注入(取代 CDN nomnoml.web.js, 斷網環境可用)
+// nomnoml(與其相依 graphre)由 jsDelivr CDN 載入(免安裝; 版本鎖定見 common/cdn.mjs)
 //   nomnoml UMD 依賴全域 graphre, 故 graphre 先載
-const GRAPHRE_JS = pkgScript('graphre/dist/graphre.js')
-const NOMNOML_JS = pkgScript('nomnoml/dist/nomnoml.js')
 
 // cls → nomnoml classifier 別名(純小寫字母 [a-z]+, 否則 nomnoml 視為字面文字而外洩)
 //   逐字映射保唯一: 大寫 G → 'g'、數字 2 → 'b'(其餘非 [a-z] 字元一律 → 'g'),
@@ -108,8 +106,8 @@ ${edgeDsls}`
 //       對策不加大間距, 而以繪製順序解: 將每個邊標籤 <text> append 至 svg 尾端(最後繪製)，
 //       使其永遠疊在容器填色/節點 rect 之上, 任何文字皆不被區塊遮住。
 const setup = `<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
-<script>${GRAPHRE_JS}</script>
-<script>${NOMNOML_JS}</script>
+${cdnScript('graphre')}
+${cdnScript('nomnoml')}
 </head><body style="margin:0;background:#fff;font-family:'Microsoft JhengHei',sans-serif">
 <div id="box" style="display:inline-block;padding:20px"></div>
 <script>
