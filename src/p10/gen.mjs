@@ -219,7 +219,9 @@ window.renderFig = async function(spec){
       else { fs.sort((a,b)=>b.w-a.w); pick=fs.find(g=>(wrapAR[g.id]||3.5)>0.22) }
       if(!pick) break
       wrapAR[pick.id] = R>A4HIGH ? (wrapAR[pick.id]||0.6)*1.9 : (wrapAR[pick.id]||3.5)/1.9
-      res = await elk.layout(mkGraph(padMap, wrapAR))
+      // elkjs 上游 bug: wrapping SINGLE_EDGE 套在「內部邊帶 label」之容器會拋 NoSuchElementException(兩條件並存才炸, 實測 0.11.1/0.12.0 皆然);
+      //   折排僅為 A4 版面美化, 失敗即放棄折排、保留前一趟合法佈局(圖僅較高/寬, 不影響正確性)
+      try { res = await elk.layout(mkGraph(padMap, wrapAR)) } catch(e){ break }
     }
 
     // 遞迴收集: 容器(深度序)、節點(絕對座標)、邊(以容器絕對座標 + section 點)
