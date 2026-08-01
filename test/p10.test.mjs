@@ -15,6 +15,7 @@ import { PNG } from 'pngjs'
 import { openStage, renderCase, runInvariants, helpers } from './lib.mjs'
 import { CASES } from './cases.mjs'
 import { DIAMOND_CASES } from './cases-diamond.mjs'
+import { SIDE_CASES } from './cases-sides.mjs'
 import { FIGURES } from './figures.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
@@ -26,6 +27,7 @@ const UPDATE = process.env.UPDATE_BASELINE === '1' || process.env.UPDATE_BASELIN
 const items = []
 for (const c of CASES) items.push({ name: c.name, data: c.data, check: c.check, expect: c.expect, kind: '合成' })
 for (const c of DIAMOND_CASES) items.push({ name: c.name, data: c.data, check: c.check, kind: '菱形' })
+for (const c of SIDE_CASES) items.push({ name: c.name, data: c.data, check: c.check, kind: '方位' })
 for (const f of FIGURES) items.push({ name: f.key, data: f.data, kind: '真圖' })
 
 // PNG 像素比對(反鋸齒容差): 回 { same, detail }

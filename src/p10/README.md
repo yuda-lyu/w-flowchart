@@ -15,6 +15,7 @@ p1~p9 為現成繪圖套件;**p10 是唯一「自寫 SVG 渲染器」產線**:�
 - **群組/巢狀容器**:群組為 ELK 的 child node、其成員為該 node 的 `children`(支援多層巢狀);`elk.padding` 上方留標題空間;`hierarchyHandling:INCLUDE_CHILDREN` 確保**跨容器邊不會把成員拉出容器**。渲染時容器 rect 墊底(深度小先畫)+ 標題置頂粗體。
 - **邊**:依 source/target 之最近共同祖先容器(LCA)宣告(無共同容器則掛於 root)——ELK 對「宣告於某容器的邊」回傳之 section 座標相對該容器,故渲染時需對位;ELK 以 `edgeRouting:ORTHOGONAL` 算**正交直角路由**,輸出 sections 轉折點 → 本產線繪 polyline + 自繪三角箭頭。座標依邊所在容器之絕對位移還原。
 - **流向**:`dir` → ELK `elk.direction`(TB→DOWN、LR→RIGHT)。
+- **邊進出方位指定(選填)**:edge 可加 `fromSide` / `toSide`(值 `'L' | 'R' | 'T' | 'B'`)指定該邊自端點節點的哪一側出/入,轉為 ELK port(`portConstraints:FIXED_SIDE` + `elk.port.side`)實現;典型用途為流程圖慣例之判斷菱形「否/退回」自左(右)側出,使進入邊保有頂部頂點。僅對葉節點端點生效(群組端點忽略側值);未指定之邊與圖行為完全不變。菱形貼齊規則(共進共出)以幾何判側,與 port 路由自動相容(指定側之出邊仍 snap 至該側頂點)。
 
 ## 自動化機制
 

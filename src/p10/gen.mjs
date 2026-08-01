@@ -14,7 +14,7 @@ export function translate(data) {
     // mi=原始數據索引(容器與葉節點同一序列): 供渲染端 elk.position 保序(同層混排容器/葉節點時仍可比較)
     const groups = data.nodes.filter(n => isGroupCls(n.cls)).map(n => { const c = colorOf(n.cls); return { id: n.id, label: n.label, parent: n.group || null, align: n.align, mi: data.nodes.indexOf(n), fill: c.fill, stroke: c.stroke, font: c.text } })
     const nodes = data.nodes.filter(n => !isGroupCls(n.cls)).map(n => { const c = colorOf(n.cls); return { id: n.id, label: n.label, title: n.title, items: n.items, parent: n.group || null, mi: data.nodes.indexOf(n), diamond: c.shape === 'diamond', fill: c.fill, stroke: c.stroke, font: c.text } })
-    const edges = data.edges.map((e, i) => ({ id: 'e' + i, from: e.from, to: e.to, label: e.label || '', dashed: e.kind === 'dashed' }))
+    const edges = data.edges.map((e, i) => ({ id: 'e' + i, from: e.from, to: e.to, label: e.label || '', dashed: e.kind === 'dashed', fromSide: e.fromSide || null, toSide: e.toSide || null }))
     // 每邊之 LCA 容器: ELK 對「宣告於某容器的邊」回傳之 section 座標相對該容器; 故把邊放到 source/target 之最近共同祖先容器, 渲染才對位(否則跑到左上)
     const parentOf = {}; groups.forEach(g => parentOf[g.id] = g.parent); nodes.forEach(n => parentOf[n.id] = n.parent)
     const anc = id => { const r = []; let p = parentOf[id]; while (p) { r.push(p); p = parentOf[p] } return r }
@@ -164,6 +164,14 @@ window.renderFig = async function(spec){
     const nById={}, gById={}
     spec.nodes.forEach(n=>nById[n.id]=n); spec.groups.forEach(g=>gById[g.id]=g)
 
+    // edge 方位指定(fromSide/toSide: L/R/T/B)→ ELK port(FIXED_SIDE); 僅對葉節點端點生效
+    //   (群組端點不建 port: 群組容器於 INCLUDE_CHILDREN 下掛 port 行為未定義, 忽略側值以免 ELK 端 id 參照失敗)
+    const SIDEP={L:'WEST',R:'EAST',T:'NORTH',B:'SOUTH'}, portsByNode={}
+    spec.edges.forEach(e=>{
+      if(e.fromSide&&SIDEP[e.fromSide]&&nById[e.from]){ const pid=e.id+'_ps'; (portsByNode[e.from]=portsByNode[e.from]||[]).push({id:pid,side:SIDEP[e.fromSide]}); e._srcPort=pid }
+      if(e.toSide&&SIDEP[e.toSide]&&nById[e.to]){ const pid=e.id+'_pt'; (portsByNode[e.to]=portsByNode[e.to]||[]).push({id:pid,side:SIDEP[e.toSide]}); e._tgtPort=pid }
+    })
+
     // 節點尺寸量測
     const size={}
     spec.nodes.forEach(n=>{
@@ -182,7 +190,7 @@ window.renderFig = async function(spec){
     const ORDER_OPTS = { 'elk.layered.crossingMinimization.semiInteractive':'true' }
     const hasCycle = (() => { const adj={}; spec.edges.forEach(e=>{ (adj[e.from]=adj[e.from]||[]).push(e.to) }); const st={}; const dfs=(u)=>{ st[u]=1; for(const v of (adj[u]||[])){ if(st[v]===1) return true; if(!st[v] && dfs(v)) return true } st[u]=2; return false }; return Object.keys(adj).some(u=>!st[u]&&dfs(u)) })()
     const gOpts = { 'elk.layered.nodePlacement.bk.fixedAlignment':'BALANCED', 'elk.padding':'[top=10,left=14,bottom=14,right=14]', 'elk.nodeLabels.placement':'[H_CENTER, V_TOP, INSIDE]', 'elk.algorithm':'layered', 'elk.direction':dir, 'elk.edgeRouting':'ORTHOGONAL', 'elk.hierarchyHandling':'INCLUDE_CHILDREN', 'elk.spacing.nodeNode':'28', 'elk.layered.spacing.nodeNodeBetweenLayers':'30', 'elk.spacing.edgeEdge':'22', 'elk.layered.spacing.edgeEdgeBetweenLayers':'24', ...ORDER_OPTS }
-    function elkEdge(e){ let lab=[]; if(e.label){ const m=measure(e.label,EFS,300); lab=[{ text:e.label, width:m.w, height:m.h }] } return { id:e.id, sources:[e.from], targets:[e.to], labels:lab } }
+    function elkEdge(e){ let lab=[]; if(e.label){ const m=measure(e.label,EFS,300); lab=[{ text:e.label, width:m.w, height:m.h }] } return { id:e.id, sources:[e._srcPort||e.from], targets:[e._tgtPort||e.to], labels:lab } }
     function build(parentId, padMap, wrapAR){
       const children=[], edges=[]
       spec.groups.filter(g=>g.parent===parentId).forEach(g=>{ const sub=build(g.id, padMap, wrapAR); const gm=measure(g.label,GFS,400)
@@ -193,7 +201,7 @@ window.renderFig = async function(spec){
         const ar=wrapAR&&wrapAR[g.id]; if(ar){ go['elk.aspectRatio']=String(ar); go['elk.layered.wrapping.strategy']='SINGLE_EDGE' }
         if(parentId || !hasCycle){ go['elk.position']='('+g.mi+','+g.mi+')' }
         children.push({ id:g.id, labels:[{text:g.label, width:gm.w+12, height:gm.h+6}], layoutOptions:go, children:sub.children, edges:sub.edges }) })
-      spec.nodes.filter(n=>n.parent===parentId).forEach(n=>{ const va=VALIGN[(gById[parentId]&&gById[parentId].align)||DEF_VALIGN]||'TOP'; const lo={ 'elk.alignment':va }; if(parentId || !hasCycle){ lo['elk.position']='('+n.mi+','+n.mi+')' } children.push({ id:n.id, width:size[n.id].w, height:size[n.id].h, layoutOptions:lo }) })
+      spec.nodes.filter(n=>n.parent===parentId).forEach(n=>{ const va=VALIGN[(gById[parentId]&&gById[parentId].align)||DEF_VALIGN]||'TOP'; const lo={ 'elk.alignment':va }; if(parentId || !hasCycle){ lo['elk.position']='('+n.mi+','+n.mi+')' } const ch={ id:n.id, width:size[n.id].w, height:size[n.id].h, layoutOptions:lo }; const nps=portsByNode[n.id]; if(nps){ lo['elk.portConstraints']='FIXED_SIDE'; ch.ports=nps.map(p=>({ id:p.id, layoutOptions:{ 'elk.port.side':p.side } })) } children.push(ch) })
       spec.edges.filter(e=>e.container===parentId).forEach(e=>{ edges.push(elkEdge(e)) })
       return { children, edges }
     }
