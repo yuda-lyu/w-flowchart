@@ -1,6 +1,6 @@
 // p10 渲染回歸(mocha) — 10 合成案 + 9 真圖, 兩層把關:
 //   A. 結構不變量(spec 翻譯, 硬失敗): 存在性/包含/標題不溢出/不重疊/items框/邊路由
-//   B. 快照基準(回歸偵測): SVG 逐字比對 + PNG 像素(pixelmatch includeAA:false, 容差 MAXDIFF)
+//   B. 快照基準(回歸偵測): SVG 逐字比對 + PNG 像素(pixelmatch 8: threshold 0.1, includeAA:false, checkerboard:true, 容差 MAXDIFF)
 // 用法:
 //   npm test                                                            全部測試
 //   npx mocha "test/p10.test.mjs" --timeout 60000           只跑本回歸
@@ -35,7 +35,7 @@ function pngCompare(baseBuf, curBuf, diffPath) {
     const a = PNG.sync.read(baseBuf), b = PNG.sync.read(curBuf)
     if (a.width !== b.width || a.height !== b.height) return { same: false, detail: `尺寸 ${a.width}x${a.height} → ${b.width}x${b.height}` }
     const diff = new PNG({ width: a.width, height: a.height })
-    const n = pixelmatch(a.data, b.data, diff.data, a.width, a.height, { includeAA: false, threshold: 0.1 })
+    const n = pixelmatch(a.data, b.data, diff.data, a.width, a.height, { threshold: 0.1, includeAA: false, checkerboard: true })
     if (n > MAXDIFF) { fs.writeFileSync(diffPath, PNG.sync.write(diff)); return { same: false, detail: `${n} 像素差 (>${MAXDIFF}) → ${diffPath}` } }
     return { same: true, detail: `${n} 像素差` }
 }

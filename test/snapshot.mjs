@@ -1,6 +1,6 @@
 // pN 渲染回歸共用層 — 以與 p10 相同之測試輸入(16 合成案 + 12 範例圖)對指定產線跑 PNG 快照基準。
 //   p1~p9 無 geom 幾何輸出(結構不變量為 p10 專屬), 其把關層為 PNG 像素基準:
-//   pixelmatch(includeAA:false, 反鋸齒容差 MAXDIFF)比對 pics/<mode>/<案>.png, 無基準或 UPDATE_BASELINE=1 時建立。
+//   pixelmatch 8(threshold 0.1, includeAA:false, checkerboard:true; 反鋸齒容差 MAXDIFF)比對 pics/<mode>/<案>.png, 無基準或 UPDATE_BASELINE=1 時建立。
 import assert from 'assert'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
@@ -26,7 +26,7 @@ function pngCompare(baseBuf, curBuf, diffPath) {
     const a = PNG.sync.read(baseBuf), b = PNG.sync.read(curBuf)
     if (a.width !== b.width || a.height !== b.height) return { same: false, detail: `尺寸 ${a.width}x${a.height} → ${b.width}x${b.height}` }
     const diff = new PNG({ width: a.width, height: a.height })
-    const n = pixelmatch(a.data, b.data, diff.data, a.width, a.height, { includeAA: false, threshold: 0.1 })
+    const n = pixelmatch(a.data, b.data, diff.data, a.width, a.height, { threshold: 0.1, includeAA: false, checkerboard: true })
     if (n > MAXDIFF) { fs.writeFileSync(diffPath, PNG.sync.write(diff)); return { same: false, detail: `${n} 像素差 (>${MAXDIFF}) → ${diffPath}` } }
     return { same: true, detail: `${n} 像素差` }
 }
