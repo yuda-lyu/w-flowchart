@@ -1,7 +1,7 @@
 // p4 — cytoscape + dagre 產線 adapter(資料驅動)
 //   genPng(data): 正規化繪圖數據 → 轉 cytoscape els → dagre 自動排版渲染 → 回傳 PNG Buffer
 //   版面通用化: rankDir 取自數據 dir; nodeSep/rankSep 為通用常數; full:true + 自動尺寸, 無逐圖魔術數字。
-import { chromium } from 'playwright'
+import launchBrowser from '../common/launchBrowser.mjs'
 import { cdnScript } from '../common/cdn.mjs'
 
 // cytoscape + dagre + cytoscape-dagre + cytoscape-svg 由 jsDelivr CDN 載入(免安裝; 版本鎖定見 common/cdn.mjs)
@@ -70,7 +70,7 @@ window.__ready = true
 // 共用渲染流程 — 啟動 headless 頁面, 建置 cytoscape + dagre 版面, 回傳指定 mode 之末端輸出(base64 png 或 svg 字串)
 // 供 genPng/genSvg 共用(genPng 行為不變: mode 傳 'png' 與原本 3 參數呼叫等價)
 async function renderPage(data, mode) {
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 1 })
         await page.setContent(html, { waitUntil: 'load' })

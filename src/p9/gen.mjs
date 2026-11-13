@@ -3,7 +3,7 @@
 //   → React Flow 渲染 + compound dagre 自動排版 → 截圖回傳 PNG Buffer
 //   版面通用化: rankDir 取自數據 dir; 節點尺寸由標籤字數/行數量測(page9.html sizeOf);
 //   群組容器尺寸/位置/畫布大小全由 dagre cluster 自動推算; 無逐圖魔術數字。
-import { chromium } from 'playwright'
+import launchBrowser from '../common/launchBrowser.mjs'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import fs from 'fs'
@@ -48,7 +48,7 @@ function translate(data) {
 
 // 單張渲染: 輸入正規化繪圖數據(結構同 FIGURES[n].data), 回傳 PNG 的 Node Buffer
 export async function genPng(data, opt = {}) {
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
         const errs = []

@@ -1,7 +1,7 @@
 // p1 — mermaid@10 dagre 產線 adapter(資料驅動)
 //   genPng(data): 正規化繪圖數據 → translate → mermaid flowchart DSL → Playwright 渲染 → 回傳 PNG Buffer
 //   自動排版: mermaid dagre 自行排版, 無任何逐圖魔術數字。
-import { chromium } from 'playwright'
+import launchBrowser from '../common/launchBrowser.mjs'
 import { PALETTE, isGroupCls } from '../common/palette.mjs'
 import { cdnScript } from '../common/cdn.mjs'
 
@@ -188,7 +188,7 @@ mermaid.initialize({ startOnLoad:false, theme:'base', themeVariables:{ fontFamil
 
 // 渲染單張至就緒頁面(mermaid DONE + 字型就緒), deviceScaleFactor:4(向量圖放大提高清晰度); caller 負責 close browser
 async function renderFigPage(code) {
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 4 })
         await page.setContent(mermaidHtml(code), { waitUntil: 'load' })

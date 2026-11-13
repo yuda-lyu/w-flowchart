@@ -13,7 +13,7 @@
 //       對策: 全部節點一律「頂層平鋪宣告」(不用巢狀), 群組歸屬改以「容器→成員」虛線關聯邊表達
 //       (比照 p10/vis 對相同限制之作法; 成員與容器共用色相已表群組), 邊端點皆以「既有節點之確切標籤」
 //       參照 → 單一連通圖、零重複節點。
-import { chromium } from 'playwright'
+import launchBrowser from '../common/launchBrowser.mjs'
 import { PALETTE, EDGE } from '../common/palette.mjs'
 import { cdnScript } from '../common/cdn.mjs'
 
@@ -173,7 +173,7 @@ async function autofix(page, src) {
 //   caller 已先做 label 衍生), 內部自建 browser/page(避免與批次流程共用 state), 沿用批次流程
 //   同一套 deviceScaleFactor、等待邏輯、碰撞偵測自動調 spacing, 回傳 PNG 之 Node Buffer(不落地檔案)。
 async function renderFigPage(data) {
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
         await page.setContent(setup, { waitUntil: 'load' })

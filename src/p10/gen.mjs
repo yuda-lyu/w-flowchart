@@ -3,7 +3,7 @@
 //   → 自寫 SVG 渲染(容器/節點/正交邊/標籤, foreignObject 渲中文)→ 截圖回傳 PNG Buffer
 //   p1~p9 為現成套件; p10 為自寫渲染器產線。ELK 的分層演算法對「巢狀容器 + 循環 + 正交路由」最強。
 //   原則: 字型全 JhengHei; 群組容器由 ELK 正確包住成員(不逃逸); 緊湊; 中文不爆框; 邊標籤白光暈不遮線。
-import { chromium } from 'playwright'
+import launchBrowser from '../common/launchBrowser.mjs'
 import { colorOf, isGroupCls, EDGE } from '../common/palette.mjs'
 import { cdnScript } from '../common/cdn.mjs'
 
@@ -417,7 +417,7 @@ window.__ready = true
 
 // 渲染單張至就緒頁面(renderFig 完成 + 字型就緒); caller 負責 close browser
 async function renderFigPage(data) {
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
         await page.setContent(PAGE_HTML, { waitUntil: 'load' })

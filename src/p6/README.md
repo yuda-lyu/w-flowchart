@@ -3,10 +3,10 @@
 ## 技術核心
 
 - **繪圖庫**：`@antv/g6@5`，改由 jsDelivr CDN 載入（免安裝），於 Playwright 頁面內以外部 `<script src>` 標籤（`cdnScript('g6')`，版本鎖定於 `src/common/cdn.mjs`）載入執行，渲染時需連網存取 CDN。`@antv/g6` 已從套件 `dependencies` 移除，Node 執行期亦不以 `import` 方式使用它，僅頁面內 `<script>` 取用其全域 `G6`。
-- **渲染方式**：以 `chromium.launch()` 開啟無頭瀏覽器，`page.setContent(html)` 載入內嵌 G6 頁面，於頁面內呼叫 `window.renderFig()`，以 `G6.Graph` + `layout: { type:'antv-dagre' }` 完成排版與渲染。
+- **渲染方式**：以 `launchBrowser()`（經 w-playwright，見 `src/common/launchBrowser.mjs`）開啟無頭瀏覽器，`page.setContent(html)` 載入內嵌 G6 頁面，於頁面內呼叫 `window.renderFig()`，以 `G6.Graph` + `layout: { type:'antv-dagre' }` 完成排版與渲染。
 - **截圖／輸出**：呼叫 `graph.toDataURL({ mode:'overall' })` 取得整圖 DataURL（非 viewport 截圖），透過 `window.snap()` 取回後在 Node 端解 base64，組成 `Buffer` 回傳（不寫檔）。
 - **解析度**：`browser.newPage({ deviceScaleFactor: 2 })`，輸出為 2× 實體像素解析度的 PNG。
-- **介面**：`genPng(data, opt)` 為單張渲染函式，由 `src/WFlowchart.mjs` 統一調用；`data` 為正規化繪圖數據 `{ dir, nodes, edges }`（caller 已完成 label 衍生）。每次呼叫皆逐次 `chromium.launch()`，並在 `finally` 呼叫 `browser.close()`，不跨圖共用頁面；同結構之 `genSvg(data, opt)` 換用 `@antv/g-lite` + `@antv/g-svg` 之官方 renderer API 以 SVG renderer 重繪（序列化前將相機 transform 歸零），與 `genPng` 共用同一套 `translate`/排版/樣式邏輯，經忠實度驗證。
+- **介面**：`genPng(data, opt)` 為單張渲染函式，由 `src/WFlowchart.mjs` 統一調用；`data` 為正規化繪圖數據 `{ dir, nodes, edges }`（caller 已完成 label 衍生）。每次呼叫皆逐次 `launchBrowser()`，並在 `finally` 呼叫 `browser.close()`，不跨圖共用頁面；同結構之 `genSvg(data, opt)` 換用 `@antv/g-lite` + `@antv/g-svg` 之官方 renderer API 以 SVG renderer 重繪（序列化前將相機 transform 歸零），與 `genPng` 共用同一套 `translate`/排版/樣式邏輯，經忠實度驗證。
 
 ## 產製原理(資料驅動)
 

@@ -1,7 +1,7 @@
 // p7 — JointJS + dagre 產線 adapter(資料驅動)
 //   genPng(data): 正規化繪圖數據 → translate 轉 JointJS 內部 els → 兩段式 dagre 自動排版渲染 → 回傳 PNG Buffer
 //   版面通用化: rankDir 取自數據 dir; nodesep/ranksep/GPAD/換行寬度 皆為通用常數或依標籤字寬/行數自動推算, 無逐圖魔術數字。
-import { chromium } from 'playwright'
+import launchBrowser from '../common/launchBrowser.mjs'
 import { PALETTE } from '../common/palette.mjs'
 import { cdnScript } from '../common/cdn.mjs'
 
@@ -366,7 +366,7 @@ window.__ready = true
 // 渲染單張至就緒頁面(#paper svg 已完成排版渲染), 回傳 {browser,page,res}(res 含 fitToContent 後之 w/h);
 //   caller 負責 close browser。渲染失敗(res.ok=false)或例外時, 先 close browser 再 rethrow。
 async function renderFigPage(data) {
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
         const errs = []

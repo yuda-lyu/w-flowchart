@@ -52,7 +52,7 @@
 
 ### 對外介面
 
-- 產線對外介面為 `genPng(data, opt)` 與 `genSvg(data, opt)`，`data` 為正規化繪圖數據 `{ dir, nodes, edges }`；`genPng` 回傳 `Promise<Buffer>`（PNG），`genSvg` 回傳 standalone SVG 字串（引擎原生輸出，另將頁面 `<style>` 之視覺修正 CSS 內嵌進 SVG 根元素使其脫離頁面仍忠實、`&nbsp;` 正規化為 `&#160;`）；兩者皆自帶瀏覽器生命週期（`chromium.launch()` → 渲染 → `browser.close()`），呼叫端不需自行管理 Playwright。
+- 產線對外介面為 `genPng(data, opt)` 與 `genSvg(data, opt)`，`data` 為正規化繪圖數據 `{ dir, nodes, edges }`；`genPng` 回傳 `Promise<Buffer>`（PNG），`genSvg` 回傳 standalone SVG 字串（引擎原生輸出，另將頁面 `<style>` 之視覺修正 CSS 內嵌進 SVG 根元素使其脫離頁面仍忠實、`&nbsp;` 正規化為 `&#160;`）；兩者皆自帶瀏覽器生命週期（`launchBrowser()` → 渲染 → `browser.close()`；`launchBrowser()` 見 `src/common/launchBrowser.mjs`，經 w-playwright 啟動），呼叫端不需自行管理 Playwright。
 - 統一由 `src/WFlowchart.mjs` 依 `mode === 'p2'` 呼叫，不提供批次流程或落地寫檔行為，是否寫檔、寫至何處由呼叫端決定。
 
 ## 自動化機制
@@ -67,7 +67,7 @@ p2 產線完全依賴 ELK 演算法自動排版，不手動指定任何節點座
 
 ### 單張渲染
 
-`genPng` 每次呼叫各自 `chromium.launch()` 一個新瀏覽器、開一個新 `page`，呼叫 `window.renderFig(code, 0)` 完成單張渲染後，等待 250 ms（`page.waitForTimeout(250)`）確保 SVG 穩定再截圖，最後關閉瀏覽器；多張圖需由呼叫端（如 `WFlowchart.mjs`）逐張呼叫 `genPng`。
+`genPng` 每次呼叫各自以 `launchBrowser()`（經 w-playwright）啟動一個新瀏覽器、開一個新 `page`，呼叫 `window.renderFig(code, 0)` 完成單張渲染後，等待 250 ms（`page.waitForTimeout(250)`）確保 SVG 穩定再截圖，最後關閉瀏覽器；多張圖需由呼叫端（如 `WFlowchart.mjs`）逐張呼叫 `genPng`。
 
 ### 方向自動取補
 

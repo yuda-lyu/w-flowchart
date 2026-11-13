@@ -2,13 +2,13 @@
 //   openStage(): 啟一個 headless 舞台頁(elkjs + renderFig 就緒)
 //   renderCase(page, data): 跑單案真實管線 → { spec, res(含 geom 幾何), svg(字串), png(Buffer) }
 //   runInvariants(spec, geom): 對「任何正確 p10 輸出皆須成立」之結構不變量做斷言(spec 翻譯, 非現狀指紋)
-import { chromium } from 'playwright'
+import wpw from 'w-playwright'
 import { translate, PAGE_HTML } from '../src/p10/gen.mjs'
 
 export { translate }
 
 export async function openStage() {
-    const browser = await chromium.launch()
+    const browser = await wpw.launchChromium({ headless: true })
     const page = await browser.newPage({ deviceScaleFactor: 2 })
     const errs = []
     page.on('pageerror', e => errs.push(e.message))

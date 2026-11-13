@@ -10,7 +10,7 @@
 //          即使非成員節點幾何落入容器框, 其不透明節點本體與最上層邊標籤皆不被容器填色染淡或遮住。
 //   原則3 緊湊不撐大: 不做「碰撞偵測 sweep 放大間距 until 零碰撞」; 採固定緊湊間距, 維持報告可用的緊湊尺寸。
 //          若緊湊間距下仍有節點互疊且非 z-order 可解, 則保持緊湊留下重疊(代表此套不適合此圖, 由挑選階段換別套)。
-import { chromium } from 'playwright'
+import launchBrowser from '../common/launchBrowser.mjs'
 import { colorOf, isGroupCls, EDGE, FONT } from '../common/palette.mjs'
 import { cdnScript } from '../common/cdn.mjs'
 
@@ -172,7 +172,7 @@ window.__ready=true
 //   (window.renderFig 排版渲染 + window.snap 之 toDataURL overall 裁切擷圖), 僅將輸出由寫檔改為
 //   回傳 Buffer, 故視覺輸出(含裁切範圍)與批次流程逐圖產出完全一致。
 export async function genPng(data, opt = {}) {
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
         const errs = []
@@ -264,7 +264,7 @@ window.__readySvg=true
 // 單張渲染:同 genPng 之輸入(單份正規化繪圖數據), 回傳 SVG 字串(緊裁切範圍對齊 genPng 之 toDataURL overall)。
 //   獨立頁面/renderer 流程(見上), genPng 之 canvas 渲染行為不受影響。
 export async function genSvg(data, opt = {}) {
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage()
         const errs = []

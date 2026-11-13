@@ -2,7 +2,7 @@
 //   genPng(data): 正規化繪圖數據 → 轉 mermaid flowchart DSL → ELK 自動排版渲染 → 回傳 PNG Buffer
 //   版面通用化: dir 取自 data.dir; 子群組方向自動取補方向; classDef/顏色取自 palette;
 //   無逐圖魔術數字, ELK 全自動排版。
-import { chromium } from 'playwright'
+import launchBrowser from '../common/launchBrowser.mjs'
 import { PALETTE, isGroupCls } from '../common/palette.mjs'
 import { cdnUrl } from '../common/cdn.mjs'
 
@@ -192,7 +192,7 @@ try {
 // data: 正規化繪圖數據 { dir, nodes, edges }(caller 已先做 label 衍生)
 async function renderFigPage(data) {
     const code = FM + translate(data)
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
         await page.setContent(setup, { waitUntil: 'load' })

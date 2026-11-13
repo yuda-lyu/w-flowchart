@@ -2,6 +2,15 @@
 
 本檔為執行工作時特有之累積經驗,留給後續之嘗試、執行與判斷,由agent自行編列、擴充與維護.過長時抽出舊者為`experience_<年月日>.md`,並於本檔註明何時抽出.
 
+## 2026-11-13 改經 w-playwright 啟動瀏覽器(排程第 442 項;移除 playwright 直接依賴)
+
+- **結果**:10 個啟動點收斂為 `src/common/launchBrowser.mjs`(內部 `wpw.launchChromium({ headless: true })`);`package.json` 移除 `playwright`、加入 `w-playwright ^1.0.1`;全套 349 → 373 passing(新增 24 案),標準圖 0 張改變(同 playwright-core 1.64.1、同 headless shell 1248,只多守門功能).規則見規則帳本規則 2.
+- **修前紅燈不啟動任何瀏覽器**:先裝 w-playwright(保留 playwright)並寫接線測試,以 `PLAYWRIGHT_BROWSERS_PATH` 指向空資料夾跑修前程式——舊站點直接呼叫 `chromium.launch()` 於「Executable doesn't exist」處失敗(尚未起行程),測試依「替身應被呼叫」「選項含守門」轉紅(1 passing、23 failing);修後同指令之 24 案全綠.
+- **接線測試寫法**:`wpw.setBrowserTypeForTest({ launch: async (o, next) => … })` 之替身記錄 `o`(w-playwright 合併後之選項)後拋錯,經公開入口 `WFlowchart(inp, { mode, output })` 驅動各產線;替身拋錯依 w-playwright 規則轉為帶 `code: 'E_LAUNCH'` 之 Error,由產線原樣往外(不被產線吞掉或改包).替身拋出含 `Executable doesn't exist at` 之訊息則轉為 `E_BROWSER_MISSING`(替身層不自動安裝).`next()` 以合併後選項走真路徑.必須斷言替身呼叫次數 > 0,否則依賴樹有兩份 w-playwright 或站點繞過時測試空過.
+- **逐站點變異**:以暫存腳本(`./tmp/pm-flc/mutate.mjs`,結束即清)把第 k 個 `await launchBrowser()` 改為拋 `E_LAUNCH` 之立即函式(使判別只剩「替身被呼叫」),跑接線測試取 json 報告,還原後以 `git diff -- src | md5sum` 前後相同驗證;單站點紅 1~2 案(p6 兩站點各 1、p9 1、其餘 2),共同啟動點紅 17 案.
+- **ESM／CJS 介接**:`import wpw from 'w-playwright'` 得含 7 個函式之物件(w-playwright 之 UMD 主檔 `module.exports` 即該物件);外部化後本套件 UMD 為 `require("w-playwright")`、以 `r.launchChromium(…)` 呼叫,暫存建置＋實渲染 p10 驗證可用.不要把 w-playwright 打包進 dist(須使 playwright-core 精確版本留在 w-playwright).
+- **陷阱**:①`npm i` 會把 `package-lock.json` 頂層 `version` 同步為 `package.json` 之版本(本輪 1.0.44 → 1.0.45,非手改);②w-playwright 於 playwright-core 版本 ≠ 內附表即 `E_PW_VERSION`,故規則 1 之瀏覽器換版對照不能只 `npm i --no-save playwright-core@舊版`,須換整個 w-playwright(尚未實跑);③`rg` 於本機僅為殼層函式,`which rg` 查不到不代表不能用.
+
 ## 2026-11-09 playwright 升 1.64.1(渲染瀏覽器換版,Chromium 153 → 156)
 
 - **結果**:p9 之 31 案中 20 案(含連線標籤者)比對失敗(151~3872 像素差);暫裝 1.63.0 後 31 案全綠且與標準圖逐像素 0 差(標準圖由舊版產出、渲染位元決定性)→ BROWSER-ONLY,逐張確認後重產該 20 張;其餘 303 張 0 變更;重產後全套 349 passing.處置程序已寫入規則 1.

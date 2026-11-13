@@ -43,7 +43,7 @@ const SVG_MODES = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p10']
  * @param {Object} [opt={}] 輸入設定物件,原樣傳遞給產線,預設 {}
  * @param {String} [opt.mode='p10'] 輸入產線模式字串,可選 'p1'~'p10',各對應一套繪圖引擎產線(技術概念見各 src/pN/README.md),未指定或非有效字串時預設 'p10'
  * @param {String} [opt.output='png'] 輸入輸出格式字串,可選 'png'(回傳 PNG Buffer)或 'svg'(回傳 standalone SVG 字串),未指定或非有效字串時預設 'png';svg 支援 p1~p8 與 p10,p9(React Flow 之 HTML DOM 渲染)不支援,給 svg 會拋錯
- * @returns {Promise} 回傳 Promise,resolve 依 opt.output 回傳 PNG 圖之 Buffer 或 SVG 字串,reject 回傳錯誤訊息
+ * @returns {Promise} 回傳 Promise,resolve 依 opt.output 回傳 PNG 圖之 Buffer 或 SVG 字串,reject 回傳錯誤訊息;渲染用瀏覽器經 w-playwright 啟動(headless shell,不自動安裝,首次使用請先 `await wpw.ensureChromium()`,見 README),啟動失敗時 reject 之 Error 帶 w-playwright 之 code(如受管瀏覽器缺檔為 'E_BROWSER_MISSING')
  * @example
  *
  * import fs from 'fs'

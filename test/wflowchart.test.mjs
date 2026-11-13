@@ -3,7 +3,7 @@ import assert from 'assert'
 import fs from 'fs'
 import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
-import { chromium } from 'playwright'
+import wpw from 'w-playwright'
 import WFlowchart from '../src/WFlowchart.mjs'
 
 const __dir = dirname(fileURLToPath(import.meta.url))
@@ -45,7 +45,7 @@ describe('WFlowchart(inp, opt) → PNG Buffer', function() {
     }
 
     it('SVG 可被瀏覽器以 XML 解析(standalone 直開)', async function() {
-        const browser = await chromium.launch()
+        const browser = await wpw.launchChromium({ headless: true })
         try {
             const page = await browser.newPage()
             for (const m of Object.keys(SVGS)) {

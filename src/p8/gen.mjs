@@ -3,7 +3,7 @@
 //   版面通用化: rankDir 取自數據 dir; 節點尺寸依 label 字寬/行數自動推算; 無逐圖魔術數字。
 //   間距(nodesep/ranksep)由「碰撞偵測自適應」迴圈決定: 渲染→量測節點/群組/邊標籤 bbox→偵測重疊→由小到大掃描間距取首個零碰撞(且留可見間隙)。
 //   邊標籤(全域修正 A): 背景透明(不遮轉折線) + 文字加白色光暈(SVG paint-order:stroke + stroke=白 stroke-width≈3.5)。
-import { chromium } from 'playwright'
+import launchBrowser from '../common/launchBrowser.mjs'
 import { PALETTE, EDGE, FONT, colorOf } from '../common/palette.mjs'
 import { cdnScript, cdnStyle, cdnFetchText } from '../common/cdn.mjs'
 
@@ -395,7 +395,7 @@ window.__ready = true
 // 內部 helper: 開 browser → 灌入 html → 等待 LF 就緒 → renderFig(data) 畫出圖面, 回傳 { browser, page }(呼叫端負責 close)。
 //   失敗時(含 renderFig 回報 !ok)於此處關閉 browser 後 rethrow, 呼叫端不需重複收拾。
 async function renderToReadyPage(data) {
-    const browser = await chromium.launch()
+    const browser = await launchBrowser()
     try {
         const page = await browser.newPage({ deviceScaleFactor: 2 })
         const errs = []
