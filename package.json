@@ -1,11 +1,11 @@
 {
   "name": "w-flowchart",
-  "version": "1.0.59",
+  "version": "1.0.60",
   "main": "dist/w-flowchart.umd.js",
   "dependencies": {
     "@terrastruct/d2": "0.1.33",
     "sharp": "^0.35.5",
-    "w-playwright": "^1.0.2",
+    "w-playwright": "^1.0.3",
     "wsemi": "^1.9.71"
   },
   "devDependencies": {

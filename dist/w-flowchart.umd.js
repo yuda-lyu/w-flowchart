@@ -1,5 +1,5 @@
 /*!
- * w-flowchart v1.0.59
+ * w-flowchart v1.0.60
  * (c) 2018-2021 yuda-lyu(semisphere)
  * Released under the MIT License.
  */
