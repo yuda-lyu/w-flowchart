@@ -1,17 +1,17 @@
 {
   "name": "w-flowchart",
-  "version": "1.0.62",
+  "version": "1.0.63",
   "main": "dist/w-flowchart.umd.js",
   "dependencies": {
     "@terrastruct/d2": "0.1.33",
     "sharp": "^0.35.5",
-    "w-playwright": "^1.0.3",
-    "wsemi": "^1.9.73"
+    "w-playwright": "^1.0.4",
+    "wsemi": "^1.9.74"
   },
   "devDependencies": {
     "pixelmatch": "^8.0.0",
     "pngjs": "^7.0.0",
-    "w-package-tools": "^1.1.29"
+    "w-package-tools": "^1.1.30"
   },
   "scripts": {
     "test": "mocha --parallel \"test/*.test.mjs\" --timeout 180000",
