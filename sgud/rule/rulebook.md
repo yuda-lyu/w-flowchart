@@ -83,3 +83,64 @@ rg -n --glob "**/package.json" --glob "!**/node_modules/**" "\"playwright(-core)
 **行為變更**(寫於 README):啟動失敗之 `Error` 帶 w-playwright 之 `code`(`E_BROWSER_MISSING`、`E_LAUNCH`、`E_LAUNCH_TIMEOUT`、`E_ENV`、`E_PW_VERSION`;`E_LOGON_GUARD` 只用於非 headless shell,本套件不會遇到),訊息為固定詞彙,不再是 Playwright 之原訊息.輸出之 PNG／SVG 不變(標準圖 0 張改變).
 
 **不納入**:`dist/` 為發布時自動產製,本輪未重建(`toolg/gDistRollup.mjs` 已改 external;以相同選項建置至暫存夾,UMD 包為 `require("w-playwright")`,經該包真渲染 p10 一張為合法 PNG).
+
+## 規則 3:測試不連 CDN(2026-11-24,排程第 632 項;全域技能 role-coder-for-test §5.3;2026-11-25 改用共用函式)
+
+**背景**:產品之渲染頁自 jsDelivr 載入 21 個鍵(16 個庫;`src/common/cdn.mjs` 之 `PKG`,版本精確鎖定),p8 另於 Node 端 `fetch` 其 CSS.測試依賴外網,網路不穩時大量轉紅(本機 2026-11-24 外網不穩時全套 81 紅,錯誤為 `dagre`／`G6`／`ELK`／`ReactDOM` 未定義、`Failed to fetch dynamically imported module`).**本規則只改測試端,不改產品**:`src/` 不含任何測試接縫,未經測試接縫時產品仍照舊連 CDN(R-FC-CDN-05 守門).
+
+**設計**:取得、校驗、鎖、路由、`fetch` 補丁等通用機制由自有套件 **w-package-tools-e2e 之 `createCdnLocal`**(`devDependencies ^1.0.51`;介面、限制與時限見其 `README.md` §2.13)提供,**本庫不再自寫**(2026-11-24 之原型 `test/tools/cdnLocal.mjs` 與其 29 案已於 2026-11-25 移除,各案之涵蓋對照見下);本庫只保留「接線」與「與產品網址表之一致性」:
+1. **橋接檔 `test/tools/cdn.mjs`**:建立本行程唯一之實例 `cdn`(`manifest: test/tools/cdn.manifest.json`、`cacheDir: test/_cache/cdn`〔以檔案位置定位,不隨 `process.cwd()`〕、`allowLoopback: false`——本套件之頁面皆 `setContent`、不連本機服務,回送位址亦視為外部);`installCdn()`(行程內只裝一次,兩步皆成功才設旗標):以 w-playwright 之 `setBrowserTypeForTest({ launch: async (o, next) => await cdn.routeBrowser(await next()) })` 對 launch 回傳之 browser 掛路由(本套件之單一啟動出口 `src/common/launchBrowser.mjs` 與測試端直接 `wpw.launchChromium` 皆經此),並 `cdn.patchFetch()`(p8 之 `cdnFetchText`).疊放之替身(`api-wpwWiring.test.mjs` 之 `makeProbe(true)`)其 `next()` 不經下層替身,須逐處自行 `cdn.routeBrowser(await next())` 並斷言 `cdn.isRouted`(R-FC-CDN-04 守門).
+2. **清單 `test/tools/cdn.manifest.json`**(126 個網址、125 種內容、21 個根,約 14 MB;sha256 為首次取得時釘選)由共用庫 CLI 依 `test/tools/cdn.roots.mjs`(單一事實來源＝`src/common/cdn.mjs` 之 `PKG` 表)產生:`node node_modules/w-package-tools-e2e/tools/genCdnManifest.mjs --roots test/tools/cdn.roots.mjs --out test/tools/cdn.manifest.json`(需連網;加 `--check` 重新下載比對、不寫檔).
+3. **取得點與檢查**:各測試檔之 `before` 以 `this.timeout(cdn.hookTimeoutMs)`(35.5 分;`p10.test.mjs` 另加 120 秒)呼叫 `cdn.ensure()` 再取 `cdn.violationMark()`,`after` 以 `cdn.assertNoViolation(mark)` 檢查(涵蓋 `close()` 未呼叫或其錯誤被吞掉者);不沿用 mocha 全域 180 秒.快取 `test/_cache/cdn/<sha256>`(內容定址;不入版控,`.gitignore`／`.npmignore` 皆列),`downloads.jsonl` 每個下載之檔一列(只下載一次之證據);**首次須能連 jsDelivr 下載約 14 MB**,多個 mocha worker 同時首次取得時只由一個行程下載(`.lock` 資料夾鎖,殘留回收、心跳、等候上限皆在共用庫).離線:`W_CDN_OFFLINE=1`(缺檔不連網,直接 `E_CDN_OFFLINE_MISSING`).
+4. **npm 包**:依 dspec〈自有套件之npm發布範圍〉第 4 條 `test/tools/` 一律不排除,故 `.npmignore` 為 `/test/*` 加 `!/test/tools/`(`npm pack --dry-run`:`test/tools/` 3 檔入包,`test/pics`／`_cache`／`_tmp` 不入包).
+
+| 條 | 規則 | 測試 |
+|---|---|---|
+| R-FC-CDN-01 | 清單之 `roots` 與 `cdn.roots.mjs`(＝`cdn.mjs` 之 `PKG` 表)之鍵與含版本網址逐一相同,每個根皆在清單內;清單內 `.mjs` 之相對匯入(含 `import()`)閉包完整 | `test/unit-cdnWiring.test.mjs`(2 案) |
+| R-FC-CDN-02 | 本庫之啟動出口(`launchBrowser()`、測試端直接 `wpw.launchChromium`)回傳之 browser 與其頁面皆已 `isRouted`,頁面載入之庫由本地副本供應(`served.browser` 增加);表外網址(含同庫不同版本)被中止、`close()` 拋 `E_CDN_EXTERNAL` 且 `violations` 含逐筆網址、`assertNoViolation` 失敗 | 同上(3 案) |
+| R-FC-CDN-03 | Node 端:`cdnFetchText` 取得之內容 sha256 與清單相同;補丁之 `fetch` 對清單內網址回本地副本(`served.fetch` +1),對表外網址與回送位址(本庫 `allowLoopback: false`)拋 `E_CDN_EXTERNAL` 並記違規 | 同上(3 案) |
+| R-FC-CDN-04 | 涵蓋盤點:凡會啟動瀏覽器之測試檔(相對匯入閉包含產線入口,或 `launchChromium(`／`launchChromiumPersistent(`)皆呼叫 `installCdn()`、`cdn.ensure()`、`this.timeout(cdn.hookTimeoutMs…)`、`cdn.violationMark()`、`cdn.assertNoViolation(`(剔除註解);使用 `setBrowserTypeForTest` 之檔(橋接檔、`api-wpwWiring.test.mjs`)每一處 `next()` 皆為 `cdn.routeBrowser(await next())`(逐處檢查,剔除註解與字串);盤點器有合成檔集自檢 | 同上(3 案) |
+| R-FC-CDN-05 | `src` 不含 `createCdnLocal`／`w-package-tools-e2e`／`cdn.manifest`／`W_CDN`／`setBrowserTypeForTest`／`installCdn`(產品預設行為不變) | 同上(1 案) |
+
+**原型 29 案移除後之涵蓋對照**(共用庫測試位於 `node_modules/w-package-tools-e2e/test/`,案號於案名之 `[...]`;逐一以 Grep 核對案號與案名存在):
+
+| 原型之案 | 共用庫之案 |
+|---|---|
+| 快取每檔大小與 sha256 獨立重算;清單格式檢核 | CL05、CL15、CL16;CL01、CL02 |
+| 頁面端:表內回本地副本、chunk 式 ESM、表外中止且 `close()` 拋錯、`newContext`、`data:` 不計 | CE01、CE02、CE03、CE04(含 CL32)、CE08(含 CL23、CL29) |
+| Node 端 `fetch`:表內回本地副本、表外拋錯、非 http(s) 通過、違規標記 | CL22、CL23／CL23b、CL21 |
+| 取得流程:4 行程只下載一次、殘留鎖(行程已結束／心跳逾時)回收、持鎖者持續心跳不誤判、等候逾時、兩回收者交錯、同內容只取一次、逾預算不派發、sha256 不符拒收、快取損毀只重取、離線、時限對齊 | CA01、CL06／CA02、CL07、CL08／CA03／DL07、CL09、CL10／DL06、CL11、CL12、CL13／CL14、CL15／CL16、CL19／CA04、CL04 |
+| 清單之鍵＝`cdn.mjs`、ESM 閉包完整、涵蓋盤點、`src` 不含接縫 | **本庫專屬,保留**於 `unit-cdnWiring.test.mjs`(R-FC-CDN-01、04、05) |
+
+**盤點指令**(站點全集):
+
+```
+git grep -n -E "cdnScript\(|cdnUrl\(|cdnStyle\(|cdnFetchText\(" -- "src/*/gen.mjs"   # 外部載入站點;預期 25 處(不含 import 列),鍵皆須在清單內
+git grep -n "fetch(" -- src                                  # Node 端 fetch;預期僅 src/common/cdn.mjs:67
+git grep -n -E "https?://" -- src                            # 外部網址;預期除 w3.org 命名空間外僅 src/common/cdn.mjs:6 之 BASE
+git grep -n --untracked "installCdn()" -- test               # 預期 snapshot.mjs、lib.mjs、wflowchart.test.mjs、api-wpwWiring.test.mjs、unit-cdnWiring.test.mjs 各 1 處(另有 tools/cdn.mjs 之定義)
+git grep -n --untracked -E "launchChromium(Persistent)?\(|setBrowserTypeForTest\(" -- test src
+node node_modules/w-package-tools-e2e/tools/genCdnManifest.mjs --roots test/tools/cdn.roots.mjs --out test/tools/cdn.manifest.json --check   # 連網;清單與線上內容一致
+```
+
+| 站點(外部載入) | 鍵 | 經由 | 判定 |
+|---|---|---|---|
+| `src/p1/gen.mjs:141` | mermaid10 | 頁面 `<script src>` | 已套(snapshot.mjs、wflowchart.test、wiring) |
+| `src/p2/gen.mjs:141-142` | mermaid11-esm、layout-elk-esm(含 chunk 閉包) | 頁面 `import()` | 已套 |
+| `src/p3/gen.mjs:109-110` | graphre、nomnoml | 頁面 | 已套 |
+| `src/p4/gen.mjs:38-41` | cytoscape、dagre、cytoscape-dagre、cytoscape-svg | 頁面 | 已套 |
+| `src/p6/gen.mjs:134,201-203` | g6、g-lite、g-svg | 頁面(png／svg 兩站點) | 已套 |
+| `src/p7/gen.mjs:29-30` | joint、dagre | 頁面 | 已套 |
+| `src/p8/gen.mjs:27-29` | logicflow-css、logicflow、dagre | 頁面 | 已套 |
+| `src/p8/gen.mjs:446` | logicflow-css | **Node 端 `fetch`** | 已套(R-FC-CDN-03) |
+| `src/p9/gen.mjs:21-25` | xyflow-css、react、react-dom、xyflow、dagrejs-dagre | 頁面 | 已套 |
+| `src/p10/gen.mjs:26` | elkjs | 頁面(`test/lib.mjs` 之舞台頁亦同) | 已套(p10.test.mjs、lib.mjs) |
+| p5(D2/WASM) | — | 無瀏覽器、無 CDN | 不適用 |
+
+**修前紅／修後綠**(2026-11-24 原型輪;2026-11-25 改用共用函式後同結論):斷網情境＝以預載腳本使全域 `fetch` 拒絕 http(s)、並對 `wpw.launchChromium` 回傳之 browser 之 context 掛 `route('**/*')` 一律中止外部請求.①修前(HEAD 之測試未動):`npm test` 62 passing、**311 failing**(15 分 44 秒;`ELK is not defined`、`dagre is not defined`、`Failed to fetch dynamically imported module`…);②修後:斷網強化版(`W_CDN_OFFLINE=1`〔原型輪為 `W_FC_CDN_OFFLINE`〕、全域 `fetch` 對非回送位址拒絕、Chromium 加 `--host-resolver-rules=MAP * ~NOTFOUND` 使任何主機名稱皆無法解析)全套全綠、預載腳本攔截紀錄 0 筆;③清空快取後 `npm test`(平行)全綠,`downloads.jsonl` 125 列、125 種內容各 1 列、1 個行程(發布包解開之目錄配置之冷快取全套亦同);④暖快取全套連跑皆綠.改用共用函式後最終數字見 `sgud/state/state.md`.預載腳本為一次性暫存檔(未入庫);要重做斷網驗收時,以 `NODE_OPTIONS=--import=<預載腳本>` 掛於 mocha 主行程與各 worker.
+
+**變異驗證**(鏡像根 `./tmp`,不動 repo;基準 12 案全綠;錨點不存在或不唯一即報失敗):19 項接線變異全轉紅、0 存活——`snapshot.mjs`／`lib.mjs`／`wflowchart.test.mjs`／`api-wpwWiring.test.mjs` 未呼叫 `installCdn()`、wiring 走真路徑之 `next()` 未包裝、wiring 另有一處未包裝之 `next()`、橋接檔之 `launch` 替身未呼叫 `routeBrowser`／回傳未包裝之 browser、橋接檔未呼叫 `cdn.patchFetch()`、橋接檔未設 `allowLoopback: false`、`cdn.mjs` 版本與清單不一致、`cdn.roots.mjs` 之網址與 `cdn.mjs` 不同、清單少一個 chunk 檔、清單 sha256 被改、`src` 含接縫字樣、`snapshot.mjs` 之 `after` 不檢查違規／取得點未掛 `cdn.hookTimeoutMs`／未取 `violationMark`、`p10.test.mjs` 之 `before` 不呼叫 `cdn.ensure()`.共用庫本身之機制(鎖、取得、路由、補丁)之變異由該庫之測試與變異(119 項)涵蓋.變異腳本為一次性暫存檔(未入庫);要重做時於 `./tmp` 建鏡像根(複製 `test/` 與 `src/`)逐項改鏡像檔再跑 `unit-cdnWiring.test.mjs`.
+
+**修改 `src/common/cdn.mjs`(增刪庫或改版本)之處置**:① 執行上列 `genCdnManifest.mjs`(連網;不加 `--check`)重產清單並入版控,審視差異;② 跑 `test/unit-cdnWiring.test.mjs`(R-FC-CDN-01 轉綠);③ 渲染結果改變者依規則 1 之程序處理標準圖;④ 舊快取檔不會被清(內容定址,無害),要釋放空間時直接刪除 `test/_cache`.
+
+**已知限制**(共用庫 README §2.13〈限制〉):路由只攔 Playwright 看得到之網路請求;SharedWorker 之請求、任何 Worker 內之 WebSocket、`context.request`(`APIRequestContext`)無 route 亦無事件(本套件之頁面皆不用);Node 端只覆寫全域 `fetch`.清單之 sha256 於首次取得時釘選,信任錨為首次產生清單當下之 jsDelivr 內容.`test/snapshot.mjs` 對 p5(無瀏覽器)亦 `cdn.ensure()`,離線且快取缺檔時 p5 亦失敗(輕微).

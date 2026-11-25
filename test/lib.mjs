@@ -4,6 +4,10 @@
 //   runInvariants(spec, geom): 對「任何正確 p10 輸出皆須成立」之結構不變量做斷言(spec 翻譯, 非現狀指紋)
 import wpw from 'w-playwright'
 import { translate, PAGE_HTML } from '../src/p10/gen.mjs'
+import { installCdn } from './tools/cdn.mjs'
+
+// 測試不連 CDN(規則帳本規則 3): 舞台頁之 elkjs 由本地副本供應; 取得(cdn.ensure())由呼叫端之 before 以對齊下載預算之時限進行
+installCdn()
 
 export { translate }
 

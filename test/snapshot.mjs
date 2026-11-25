@@ -10,6 +10,10 @@ import { PNG } from 'pngjs'
 import { deriveLabels } from '../src/common/derive.mjs'
 import { CASES } from './cases.mjs'
 import { FIGURES } from './figures.mjs'
+import { cdn, installCdn } from './tools/cdn.mjs'
+
+// 測試不連 CDN(規則帳本規則 3): 繪圖庫由本地副本供應, 對照表以外之外部請求使測試失敗
+installCdn()
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const MAXDIFF = 60   // PNG 容許之反鋸齒雜訊像素上限(真 regression 量級遠超此)
@@ -38,8 +42,17 @@ export function definePngSuite(mode, genPng, opt = {}) {
 
     describe(`${mode} 渲染回歸(PNG 快照基準)`, function() {
 
-        before(function() {
+        let mark = null
+
+        before(async function() {
+            this.timeout(cdn.hookTimeoutMs) // 取得點之時限對齊下載預算(首次需下載時), 不沿用 mocha 全域 180 秒
             fs.mkdirSync(SNAP, { recursive: true })
+            await cdn.ensure()
+            mark = cdn.violationMark()
+        })
+
+        after(function() {
+            if (mark) cdn.assertNoViolation(mark) // 本檔期間若有任何外部請求違規(含其錯誤被吞掉者)即失敗
         })
 
         for (const tc of items) {

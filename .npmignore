@@ -1,5 +1,6 @@
 node_modules
 test/_tmp
+test/_cache
 .agents
 CLAUDE*.md
 AGENTS*.md
@@ -12,4 +13,6 @@ test-screenshot
 test-html
 
 # 第 2 條(dspec〈自有套件之npm發布範圍〉):單一資料夾 ≥10MB 之非程式碼資料,使用端用不到
-/test/
+#   (第 4 條: test/tools/ 一律不排除, 故只排除 test/ 之其餘內容; test/_cache、test/_tmp 已於上列)
+/test/*
+!/test/tools/

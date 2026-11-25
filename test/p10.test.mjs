@@ -13,6 +13,7 @@ import { dirname, resolve } from 'path'
 import pixelmatch from 'pixelmatch'
 import { PNG } from 'pngjs'
 import { openStage, renderCase, runInvariants, helpers } from './lib.mjs'
+import { cdn } from './tools/cdn.mjs'
 import { CASES } from './cases.mjs'
 import { DIAMOND_CASES } from './cases-diamond.mjs'
 import { SIDE_CASES } from './cases-sides.mjs'
@@ -43,17 +44,25 @@ function pngCompare(baseBuf, curBuf, diffPath) {
 describe('p10 渲染回歸(結構不變量 + 快照基準)', function() {
     let browser = null
     let page = null
+    let mark = null
 
     before(async function() {
-        this.timeout(120000)
+        this.timeout(cdn.hookTimeoutMs + 120000) // 取得點(首次需下載時)之時限對齊下載預算, 再加舞台頁啟動之 120 秒
         fs.mkdirSync(SNAP, { recursive: true })
+        await cdn.ensure()
+        mark = cdn.violationMark()
         const s = await openStage()
         browser = s.browser
         page = s.page
     })
 
     after(async function() {
-        if (browser) await browser.close()
+        try {
+            if (browser) await browser.close()
+        }
+        finally {
+            if (mark) cdn.assertNoViolation(mark) // 本檔期間若有任何外部請求違規(含 close() 前已被吞掉者)即失敗
+        }
     })
 
     for (const tc of items) {

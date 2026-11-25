@@ -5,6 +5,10 @@ import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
 import wpw from 'w-playwright'
 import WFlowchart from '../src/WFlowchart.mjs'
+import { cdn, installCdn } from './tools/cdn.mjs'
+
+// 測試不連 CDN(規則帳本規則 3): 繪圖庫由本地副本供應, 對照表以外之外部請求使測試失敗
+installCdn()
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const inp = JSON.parse(fs.readFileSync(resolve(__dir, 'data', '電商平台架構圖.json'), 'utf8'))
@@ -13,6 +17,18 @@ const isPng = (buf) => Buffer.isBuffer(buf) && buf[0] === 0x89 && buf[1] === 0x5
 const SVG_MODES = ['p1', 'p2', 'p3', 'p4', 'p5', 'p6', 'p7', 'p8', 'p10']
 
 describe('WFlowchart(inp, opt) → PNG Buffer', function() {
+
+    let mark = null
+
+    before(async function() {
+        this.timeout(cdn.hookTimeoutMs) // 取得點之時限對齊下載預算, 不沿用 mocha 全域 180 秒
+        await cdn.ensure()
+        mark = cdn.violationMark()
+    })
+
+    after(function() {
+        if (mark) cdn.assertNoViolation(mark) // 本檔期間若有任何外部請求違規(含其錯誤被吞掉者)即失敗
+    })
 
     for (let i = 1; i <= 10; i++) {
         const m = 'p' + i

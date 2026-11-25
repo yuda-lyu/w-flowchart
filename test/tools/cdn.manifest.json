@@ -1,0 +1,533 @@
+{
+  "schema": 1,
+  "note": "由 node_modules/w-package-tools-e2e/tools/genCdnManifest.mjs 依 test/tools/cdn.roots.mjs(src/common/cdn.mjs 之 PKG 表)產生; 修改 cdn.mjs 之庫或版本後須重新執行",
+  "roots": {
+    "mermaid10": "https://cdn.jsdelivr.net/npm/mermaid@10.9.6/dist/mermaid.min.js",
+    "mermaid11-esm": "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.esm.min.mjs",
+    "layout-elk-esm": "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.2.2/dist/mermaid-layout-elk.esm.min.mjs",
+    "graphre": "https://cdn.jsdelivr.net/npm/graphre@0.1.3/dist/graphre.js",
+    "nomnoml": "https://cdn.jsdelivr.net/npm/nomnoml@1.7.0/dist/nomnoml.js",
+    "cytoscape": "https://cdn.jsdelivr.net/npm/cytoscape@3.34.0/dist/cytoscape.min.js",
+    "cytoscape-dagre": "https://cdn.jsdelivr.net/npm/cytoscape-dagre@4.0.0/dist/cytoscape-dagre.js",
+    "cytoscape-svg": "https://cdn.jsdelivr.net/npm/cytoscape-svg@0.4.0/cytoscape-svg.js",
+    "g6": "https://cdn.jsdelivr.net/npm/@antv/g6@5.1.1/dist/g6.min.js",
+    "g-lite": "https://cdn.jsdelivr.net/npm/@antv/g-lite@2.7.0/dist/index.umd.min.js",
+    "g-svg": "https://cdn.jsdelivr.net/npm/@antv/g-svg@2.1.1/dist/index.umd.min.js",
+    "joint": "https://cdn.jsdelivr.net/npm/@joint/core@4.3.0/dist/joint.min.js",
+    "logicflow": "https://cdn.jsdelivr.net/npm/@logicflow/core@2.2.4/dist/index.min.js",
+    "logicflow-css": "https://cdn.jsdelivr.net/npm/@logicflow/core@2.2.4/dist/index.css",
+    "react": "https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js",
+    "react-dom": "https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js",
+    "xyflow": "https://cdn.jsdelivr.net/npm/@xyflow/react@12.11.2/dist/umd/index.js",
+    "xyflow-css": "https://cdn.jsdelivr.net/npm/@xyflow/react@12.11.2/dist/style.css",
+    "dagrejs-dagre": "https://cdn.jsdelivr.net/npm/@dagrejs/dagre@1.1.8/dist/dagre.min.js",
+    "dagre": "https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js",
+    "elkjs": "https://cdn.jsdelivr.net/npm/elkjs@0.11.1/lib/elk.bundled.js"
+  },
+  "files": {
+    "https://cdn.jsdelivr.net/npm/@antv/g-lite@2.7.0/dist/index.umd.min.js": {
+      "sha256": "29d200f327d6ba313f77d86a10a410a118b496a40c09edfa2a5283c2048b894d",
+      "size": 278719
+    },
+    "https://cdn.jsdelivr.net/npm/@antv/g-svg@2.1.1/dist/index.umd.min.js": {
+      "sha256": "14de1bc7362ca8e4c81b29dc76166bb931e90156316b8468c47cd1f2677358e4",
+      "size": 49015
+    },
+    "https://cdn.jsdelivr.net/npm/@antv/g6@5.1.1/dist/g6.min.js": {
+      "sha256": "3e091a94fd08994a383ff34bfba256bb8e382e4be4042197a206d2ecc0957331",
+      "size": 1383347
+    },
+    "https://cdn.jsdelivr.net/npm/@dagrejs/dagre@1.1.8/dist/dagre.min.js": {
+      "sha256": "c35b8d6f410ce7bdd302fc00cad27331184e52b2e738609e55ae3bbb4fb4849f",
+      "size": 97200
+    },
+    "https://cdn.jsdelivr.net/npm/@joint/core@4.3.0/dist/joint.min.js": {
+      "sha256": "6936eb5e65dc0bbe247053014aaa3204020f18b65afd32b6961136ac8988fe56",
+      "size": 473329
+    },
+    "https://cdn.jsdelivr.net/npm/@logicflow/core@2.2.4/dist/index.css": {
+      "sha256": "2c547cc3f14c137acda3093b181ee8a3f387ff92ad1c38eaef778e0c3330d54d",
+      "size": 2833
+    },
+    "https://cdn.jsdelivr.net/npm/@logicflow/core@2.2.4/dist/index.min.js": {
+      "sha256": "7ce8836806f7624dba1caee5f425d055e5d0f5ec5d38c44ebda1b35396f3ffa1",
+      "size": 419510
+    },
+    "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.2.2/dist/chunks/mermaid-layout-elk.esm.min/chunk-SP2CHFBE.mjs": {
+      "sha256": "3a5c5345325742c2088edaaaa67661f00082d20a3e1902e4864ac5feb5e918f9",
+      "size": 854
+    },
+    "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.2.2/dist/chunks/mermaid-layout-elk.esm.min/render-FL5BWEWF.mjs": {
+      "sha256": "1e7ce4e7796819488e5b904d7577c3ef6647a808859ba9ddbc0f02006a10667b",
+      "size": 1643392
+    },
+    "https://cdn.jsdelivr.net/npm/@mermaid-js/layout-elk@0.2.2/dist/mermaid-layout-elk.esm.min.mjs": {
+      "sha256": "c4190b5bea8c7a5958f83b9932960f4c2ae4b5912ae441767970ea6aa7339c45",
+      "size": 356
+    },
+    "https://cdn.jsdelivr.net/npm/@xyflow/react@12.11.2/dist/style.css": {
+      "sha256": "7ed5ae87a6c9bd664fce1802ce33fbe84faaefe33e21c82be35529df06e0c686",
+      "size": 18596
+    },
+    "https://cdn.jsdelivr.net/npm/@xyflow/react@12.11.2/dist/umd/index.js": {
+      "sha256": "6709e2e548e4d7b87bdc651653f3c2af5bfaaf1360241ef59ab918c5dbcea7c8",
+      "size": 187408
+    },
+    "https://cdn.jsdelivr.net/npm/cytoscape-dagre@4.0.0/dist/cytoscape-dagre.js": {
+      "sha256": "91f342cc2705aa9cad6a26f468d9ee5faa9e057d9172c3f9e732548fc61c660d",
+      "size": 56856
+    },
+    "https://cdn.jsdelivr.net/npm/cytoscape-svg@0.4.0/cytoscape-svg.js": {
+      "sha256": "530cfaeba7aaa11214ddd6cc5603413f51e39afa691173bb5efbd6a13b3e42c3",
+      "size": 21128
+    },
+    "https://cdn.jsdelivr.net/npm/cytoscape@3.34.0/dist/cytoscape.min.js": {
+      "sha256": "9c2a3bf2592e0b14a1f7bec07c03a54f16dedf32af9cd0af155c716aa6c87bc3",
+      "size": 435328
+    },
+    "https://cdn.jsdelivr.net/npm/dagre@0.8.5/dist/dagre.min.js": {
+      "sha256": "62eb9787ccfdbdf4148d4d99d31dbf9ee4770eafee81e637d759b52aac22cd51",
+      "size": 283803
+    },
+    "https://cdn.jsdelivr.net/npm/elkjs@0.11.1/lib/elk.bundled.js": {
+      "sha256": "20dd2114d683ce758b3ce19bcc56e28a504a617b0d280f760407c37314631d0e",
+      "size": 1607470
+    },
+    "https://cdn.jsdelivr.net/npm/graphre@0.1.3/dist/graphre.js": {
+      "sha256": "d88111e403c1210ef905c86be98761c15d3ff190636470d838edc1797f8d5c7a",
+      "size": 38690
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@10.9.6/dist/mermaid.min.js": {
+      "sha256": "eda3a0ad572bbe69a318c1be0163e8233dd824f3f12939e5168feba207767151",
+      "size": 3337508
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/abnfDiagram-U6D7WRMF.mjs": {
+      "sha256": "dafb69c3fb057e219f46a5ae1f2ef82086c197fcbf2c4fb2ceb787312be97d89",
+      "size": 2293
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/architecture-TIHT7OUA-V6N4J3SY.mjs": {
+      "sha256": "4ac3013dba07e4b82798d7dddda3601d1d98e338dcca6a5c5a5778b0fe6c50ce",
+      "size": 171
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/architectureDiagram-CXLCLZGG.mjs": {
+      "sha256": "d7072ca3fdef2b2c69c36c92c0103c8bd483397c43b1904e33a268d5a640be8a",
+      "size": 155061
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/blockDiagram-BDH3CYR7.mjs": {
+      "sha256": "a1557cb0f05e07dd8dc9626edbae5a02bd7947d50b40ecb7d9a394d1791a1959",
+      "size": 71865
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/c4Diagram-6Y6SKSDM.mjs": {
+      "sha256": "eb3c33b5d588dbdab4f7b52099fa6ae04d4ddef1310d811b30b2c4557a0aa510",
+      "size": 70310
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-224SPVON.mjs": {
+      "sha256": "106897ed01950fdb24ea92cbea810b72911f6566d4b2f4c0e684744d0f1370b4",
+      "size": 550
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-4RFN2BYJ.mjs": {
+      "sha256": "23314130df2cb3093e6f4b5d6e9429a6c9f38f752f608ae9da214d57c478576f",
+      "size": 555
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-4S3VB3X6.mjs": {
+      "sha256": "a3487a6ad9a580f1610f4810006cb1850a2f466c19b2bb450c30ee41440c8ae0",
+      "size": 562
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-5IMINLNL.mjs": {
+      "sha256": "ed3c40c332ee25f9c86e89507f2a6d18edefda66eadfb38ef3aeb59b95dad2b2",
+      "size": 28157
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-5VCL7Z4A.mjs": {
+      "sha256": "923319fb47f66b4ec1eda16c8e2b7c86c3126dd30e670772c61fdfd40bd1fed3",
+      "size": 2115
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-66DQ2XMT.mjs": {
+      "sha256": "09bd00c04cf0908c651ba73cf22a6aaab2291adfa4ce7ee5f8b835c7619bcf3c",
+      "size": 991
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-6C3L5S6U.mjs": {
+      "sha256": "a244b27989c1f6a32b150b61359c627be6ab2adcf2e3844e9691a9ccd499f429",
+      "size": 34192
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-7FYTHRHK.mjs": {
+      "sha256": "d8289e52f9933b146725db036cf8c935df33378aea95d8b37e8232ca7c1efd30",
+      "size": 42494
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-AQ6EADP3.mjs": {
+      "sha256": "13f83482f9731f6ed320746bf4f69aaaff5e1efdda94f64cd9ea6d9030b868c2",
+      "size": 663
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-AX4YENZL.mjs": {
+      "sha256": "cb1a948bf353e489bdece64047f38ff2425f323e5f2546825f2de7c719776dfd",
+      "size": 38432
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-AZZRMDJM.mjs": {
+      "sha256": "e5c109a799a86fc58b75bbb2cbdb72a6570c8c29821037d181ebe019db0beab1",
+      "size": 360
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-BI6VK774.mjs": {
+      "sha256": "97caa6db4057b3f102a4aa7f3628a740b72b1b2fb9a0c4a978ddf864a39f31a5",
+      "size": 1792
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-D6VWDJW2.mjs": {
+      "sha256": "e7813fbe9401a041c7c35f894c99457de7404e58e5351f3ea6440c526b71bb00",
+      "size": 1212
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-DMV4VAQV.mjs": {
+      "sha256": "0ccc30de1d64e92deaf38b6b00c214bb779e09ea961e4521cb26430fe992a13e",
+      "size": 3414
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-E5QJAATJ.mjs": {
+      "sha256": "5ea63a7706949a88f363221d082e1b20157240b1706248b100bb0f6ce060882e",
+      "size": 1285
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-ENMKPL7Y.mjs": {
+      "sha256": "ed87e648d5c76384eec3a34756a67daaf5aba14fb44d3eafee348754637f3fc6",
+      "size": 18563
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-EQFTRU2I.mjs": {
+      "sha256": "726433c36797f3de029d5bef36c2280e301d8bb817c35d06b4650d7081222cb2",
+      "size": 1186
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-FWYVLQTC.mjs": {
+      "sha256": "0ff4679432bf2790874085155cead21924fd47314042584a7bfe4a741de9d893",
+      "size": 556
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-HCQLZPVX.mjs": {
+      "sha256": "9a497004bb79bf50061a771e51e6f20fbb46ec010ed88949f18e2b91cc002663",
+      "size": 1991
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-HNC4WDU7.mjs": {
+      "sha256": "edb2b880152a63227abfb2cda85c8951c6ca83689262d1a0af8be5f79af1cf05",
+      "size": 567
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-JQRUD6KW.mjs": {
+      "sha256": "ab31e28cd7a9246443f102d2d34e07740bb9a872d1a6a65deb165f163a641517",
+      "size": 221
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-KEUXMURM.mjs": {
+      "sha256": "15ab27626a940b5fc2324b88ec359a0d06a0d27befe110163478c1772173498d",
+      "size": 232269
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-KRXBNO2N.mjs": {
+      "sha256": "45d2e1a6271e678ca3823e6da3bead7effbc3f4b9f751ed9109c98c4b01af561",
+      "size": 28568
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-KTKOSTGQ.mjs": {
+      "sha256": "a2c4fde347a41f1b404e9683789e625dc6d33dc13e327199e9bd229605813bc1",
+      "size": 102613
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-L5GCOVLC.mjs": {
+      "sha256": "87fc9c74c9711e04eceaf9b2e10d107aac440c92b25198e654c02003838c50bf",
+      "size": 705061
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-LAHSG3N2.mjs": {
+      "sha256": "880de71ecb9daf937713d50fde8dd59e6c47e7740363b1c5325ec8e90d55dfce",
+      "size": 468938
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-LIEV3EAG.mjs": {
+      "sha256": "e6d431e84c685d0eca811a02f62708a25f9191171d7d384e2521268a46422300",
+      "size": 120481
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-LUNKGL7L.mjs": {
+      "sha256": "084e5f2325584d88c5acf4d3066d726235191df6e04ff78c7039341b89a8b5ea",
+      "size": 60974
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-MXWVPPQS.mjs": {
+      "sha256": "571df9150e383656dfc5f5d78be52fefdb883958149ae10bc6eba4532bb717c2",
+      "size": 6261
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-NV3KIAZN.mjs": {
+      "sha256": "879f555c3214d46d025211ee3dd4a5bb1270231881293b2ba16693859806de99",
+      "size": 568
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-OIYT25JQ.mjs": {
+      "sha256": "104e929ab1b4bb27bc06b6b4fc4d8044fea9a3e41616135adbd0ac494f1efacf",
+      "size": 1055
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-QU2NO3GS.mjs": {
+      "sha256": "ba85f666b718fa143541aa792a249d1d5ff97abf4f33268afcafc70b4629e1cb",
+      "size": 2451
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-RRFMTAIC.mjs": {
+      "sha256": "57eb88c3f76b7bdca544c02cb4bd19d4e277ad8740137dd99abacc49c588ee7c",
+      "size": 730
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-SATU7PGQ.mjs": {
+      "sha256": "3f5a8d735b17e5566e8526db97931630f3dc023a66393e5bee323078181e88db",
+      "size": 1849
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-STADKHD7.mjs": {
+      "sha256": "b38170b389c109d9ab489cb5070ee3ced561c348a2e15a4451b3859eb45bbe4b",
+      "size": 953
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-STOV2HOB.mjs": {
+      "sha256": "b9dcf40a130db7675f59151f77ea069438782074fa847001abcd6bb82b8d9b02",
+      "size": 2020
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-SXFNDEX5.mjs": {
+      "sha256": "1b74ff21b33dbda9171e827bd9bc02f303fc3b8c5ac5c1f689b40c5ee145d614",
+      "size": 1846
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-SZQNAPRP.mjs": {
+      "sha256": "ba06d06040d28781cd9a5f481014cd0165edfca3772c80767277d82fa14f8108",
+      "size": 47100
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-T5OCTHI4.mjs": {
+      "sha256": "bcf848310d29d090f623a39375c36b19f4c78c0856bddd8a68b3998a729f2fdc",
+      "size": 189
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-TZUXEDM2.mjs": {
+      "sha256": "2e90f11fbef8a2af7791a6e0e83603e66fda48451d205bf73d4a3411e45c227f",
+      "size": 1066
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-UITSOMYB.mjs": {
+      "sha256": "2cf9c1646b9075a127bb59bbe16ea81128b561b8748aff7b30a84eff938bf5e7",
+      "size": 15737
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-VE5CLXGZ.mjs": {
+      "sha256": "86b0d4f0e161df3400dccac0e4b6e4b2aa5983cf3c2edee3dfa4915f07d6a501",
+      "size": 263
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-VIJNA47K.mjs": {
+      "sha256": "641b2c0319a82249f483ac881c79254e1089c1a73c6b9d621f58f5567ded27f2",
+      "size": 49281
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-VY5UBI4V.mjs": {
+      "sha256": "9b63597072ca997a7b50812a5f4857df16e4ce48b262e9a3553802db3e12dfe3",
+      "size": 7020
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-W44A43WB.mjs": {
+      "sha256": "5ea884c347e3c61eae14a29442ea017a28b22734d600dc7bed957b6fd3dbfd8e",
+      "size": 42495
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-XNMVGMAZ.mjs": {
+      "sha256": "fada21c58ead432eba08b4e3ceff3a93f69c6effcf8da0e964814fc4a2e2ddbe",
+      "size": 597
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/chunk-Y3FQM624.mjs": {
+      "sha256": "8d22c1633148c5c572adf9bd6d03e4ce42e6357bcd29c997b5a0bd9a4cdd25ca",
+      "size": 316
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/classDiagram-GTSBOMN5.mjs": {
+      "sha256": "94490663d9114b628a9fc8e8cf4f500ac26bdf1e5c0990421b04f8f8e951b180",
+      "size": 765
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/classDiagram-v2-4NET3KXY.mjs": {
+      "sha256": "94490663d9114b628a9fc8e8cf4f500ac26bdf1e5c0990421b04f8f8e951b180",
+      "size": 765
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/cose-bilkent-RZA4XIPR.mjs": {
+      "sha256": "3168d10108921bb3ae573fbd234e0ac9f098e1018be5cacc71a982540203390a",
+      "size": 84169
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/cynefin-VYW2F7L2-2VAHYKR6.mjs": {
+      "sha256": "afce7dab0d785151d10d91441beaf531466127a39da9dcbe4af78d3cf5b90cb9",
+      "size": 161
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/cynefinDiagram-N5GTLAMU.mjs": {
+      "sha256": "61c2652c7e99c11af4fc24ed0c3c80b130a2decbcc9eaeb814442379c9edc21e",
+      "size": 10595
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/dagre-QGBC2H2C.mjs": {
+      "sha256": "1309e1fea242e7e4c4eb9c47dff01341966f5903599f9e8b0ddfa0b1c04af00e",
+      "size": 8826
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/diagram-5YXONRP5.mjs": {
+      "sha256": "6d6e4e177a790b2926b288e19e8ea542b4684c6d482d3264c86a373de1c092d7",
+      "size": 6468
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/diagram-EERCSO4V.mjs": {
+      "sha256": "9a7fc296857d70a320b2895966d53a1b252a64c9e2f7195627bca936d61e9061",
+      "size": 11620
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/diagram-EYB2CBB5.mjs": {
+      "sha256": "d8dc075d4a12e439de6222d8696f2311a73556929fe0ba5610947f095f0a48d4",
+      "size": 8851
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/diagram-G5KYCVHS.mjs": {
+      "sha256": "065434b685633c782ca0ab238f5a24471f3aa9ab6495052b289dff1efa3708dd",
+      "size": 4781
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/diagram-JDTM4OSO.mjs": {
+      "sha256": "c30bed61bc01f7fd2daf470917b3895373903eb03a2fc45d4e47a38ff421dd88",
+      "size": 11231
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/ebnfDiagram-7D6ZXF7D.mjs": {
+      "sha256": "2bc717f54efe663f4b8856979ab36900ba2dd50cde73e06258810c3e81477a74",
+      "size": 2507
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/erDiagram-OQMWT43X.mjs": {
+      "sha256": "a6acdd9fc5cf175aa3056f17030f6bd1d3f47839b6ab4409d9cbd08bee7ce474",
+      "size": 27462
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/eventmodeling-45OFAUF4-AOUJWSLX.mjs": {
+      "sha256": "d555ca9f11aa3b68df01a7039059bba40496f495a2b69a868cafa093d9d3e4ae",
+      "size": 173
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/flowDiagram-ZACVJCCL.mjs": {
+      "sha256": "3e1696ecbd4e64d7c5ccc3ff4779e9db48db078550e130906ece7b13223e46f5",
+      "size": 644
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/ganttDiagram-65O4CIDK.mjs": {
+      "sha256": "02be24149e5b8366a6611e17c28ea1118814e76b83bf85a808dded83505766a5",
+      "size": 50519
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/gitGraph-TEB2WS4Q-U5VWYIBC.mjs": {
+      "sha256": "e5650c42c15412f8b9b1cf23391af06ace863c4cff567f7e7cdb930adcef4452",
+      "size": 163
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/gitGraphDiagram-7AKFKS3M.mjs": {
+      "sha256": "8d9ce4b44efdd8b50981e02da9cd505ed51b22db2f6d8f8689e3b985c76e0b44",
+      "size": 29721
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/info-DKCQHKI2-DX6KST54.mjs": {
+      "sha256": "81f3b2fbcf14edaea2ddc199347e5a6c9d61b9e86d9d51bd436ebc3df9886eb7",
+      "size": 155
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/infoDiagram-VANWJNXV.mjs": {
+      "sha256": "58b469a7ba65d9a3e51b2729cce17d1c512309e98ade1159927bb846c7d71dca",
+      "size": 1117
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/ishikawaDiagram-5Q2OBY3B.mjs": {
+      "sha256": "5639c779c9118627b6048b585e0691343962c01ae1b4fdf3bf2c34caeb6b9de2",
+      "size": 17602
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/journeyDiagram-WII6DRMM.mjs": {
+      "sha256": "26c960ae4f25d508db1af2620a1be111d91049468a0d20c592fe0a662469d532",
+      "size": 23543
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/kanban-definition-B52SFAVG.mjs": {
+      "sha256": "8b1f564f84a3fdce4db8d009cd97563c20f8c058d6de432d388f9b39fcd6ed8b",
+      "size": 20749
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/katex-C5OPUE3Q.mjs": {
+      "sha256": "66f00e67b71a51efcf8562554ff3cfb7342653b0d6069ebbf7123451daa2e8f3",
+      "size": 270207
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/mindmap-definition-GVBGAMR2.mjs": {
+      "sha256": "e5f782ca5776b033e7cfcfec13cc35277e9775b701f404f32f0bf3da4301c0b0",
+      "size": 23892
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/packet-7NZHBO7P-5WG45QPS.mjs": {
+      "sha256": "32d837cc69f0d75dedb9c8a90fd197908fe82c46907461bd94197a3c4d2991fd",
+      "size": 159
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/pegDiagram-ZGJ7CXPE.mjs": {
+      "sha256": "bf59bc73686ef523fc406e839e2154c5594664df89e6dff308e2351d099c888c",
+      "size": 2449
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/pie-RZYD4A2V-2OCZ2VTD.mjs": {
+      "sha256": "7be075f26467b22a9c9230d78fa8a6aec5f1364003fb19748e63bad346bd2002",
+      "size": 153
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/pieDiagram-OG5FZAAG.mjs": {
+      "sha256": "ce4cc9b9b5d604ef33a97ac83393a6683659b186223163b43df2c200f794704e",
+      "size": 5615
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/quadrantDiagram-QALJNKXI.mjs": {
+      "sha256": "583b12b8ccfa6f5a400b6b9181f403e2134aff07848bde0ea980679f43a8381a",
+      "size": 34035
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/radar-I7S5WNFK-EPLSA35B.mjs": {
+      "sha256": "1f579c758a9c08674e38e18a5b1411112838f510117654e8e4a87e395ff26dc7",
+      "size": 157
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/railroad-3IZDKUUU-PWFQV6Y6.mjs": {
+      "sha256": "66d82b33cdd8c6dc3f894771e88b380a7658f54acc3dca436385e0497b5baca8",
+      "size": 163
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/railroad-abnf-AHOZXSZD-JYYJX3BS.mjs": {
+      "sha256": "b1277bd74b3a88611bfce9f1a1cde5c5ae09f7494e783a7f1e01815014085c26",
+      "size": 171
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/railroad-ebnf-EBAXGLYW-RBZ4ONAP.mjs": {
+      "sha256": "6b7b97ef5c73b69b68a4809ea94268bde2e63d672fc77ee56f948e63beb1a31f",
+      "size": 171
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/railroad-peg-LSFZ7HO6-KHNPXGPG.mjs": {
+      "sha256": "178487c55bec3ed0a2d314f7ee94785b8d7fd4658da62b390ff8cd826d173cf9",
+      "size": 169
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/railroadDiagram-KTWOLP6L.mjs": {
+      "sha256": "d5c589f6bacd5258ade0afbe3300fd49e97feb3a94767221412f6a717e53d140",
+      "size": 2115
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/requirementDiagram-4WCXXUE4.mjs": {
+      "sha256": "92dcbb9bbf2b69eb0b7b8f7ce135b5e624dec9191942c8e2b33061816df415f3",
+      "size": 31415
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/sankeyDiagram-H77HJZDF.mjs": {
+      "sha256": "22300e24cbae2d3915b660b9180f85c4ac0fa46dcf4a07c37f3aea3297ca23de",
+      "size": 24134
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/sequenceDiagram-ESAOAU5S.mjs": {
+      "sha256": "ecca4be651ecc6921503eb758a1eb118c19448ac9ce5aaaad9782f278ec9730a",
+      "size": 116945
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/sizeCapture-5GORAGP4.mjs": {
+      "sha256": "d35e060aabccb4c14e76f544a9925631e0b3dcea95dca128ee0ffe0ae3c803f9",
+      "size": 884
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/stateDiagram-CSZEIB5N.mjs": {
+      "sha256": "ab19ea4890c072f37ae9efd1f883a6af55aa279b7059a50f0950389a06873a8f",
+      "size": 10684
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/stateDiagram-v2-HCNZSXAK.mjs": {
+      "sha256": "ff9098e359ed962eafd6d12d4e49740b41c5d25eb2a5327558266e0f586fd507",
+      "size": 744
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/swimlanes-SIZDLOB3.mjs": {
+      "sha256": "4882243201ff9c90d2958c104435312dbed492010cef609efd8461f2b9545fe9",
+      "size": 116053
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/swimlanesDiagram-OX7UBUGT.mjs": {
+      "sha256": "7144873a9aa09807d047498c57a0626a5c8ebed62246f93ce60e79f023ccf953",
+      "size": 848
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/timeline-definition-MJJPMYOD.mjs": {
+      "sha256": "f515e465809d50237b01ad367b945cab63916503eff1dc1691c27d66c421d312",
+      "size": 30820
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/treeView-QDETBFTQ-EHYTSQNO.mjs": {
+      "sha256": "a2ef50a12f4e175fbb3b667120b93f651aba5410a048d7c89166c65020dad021",
+      "size": 163
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/treemap-6X3UGDF4-CCWCF7EK.mjs": {
+      "sha256": "774b6f3b3618277e4b6945fb7146fbfa55a1db620c4da67bdb447be9fd0de952",
+      "size": 161
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/vennDiagram-VSB6UTAL.mjs": {
+      "sha256": "bfd76a6e34fc06de2e8a2fb8f76f5e3c53e64c66c7ae768f5a5152cdd44be6a6",
+      "size": 43040
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/wardley-OPB4EBWU-6OWERDVT.mjs": {
+      "sha256": "29b7ba6345d13795aad38877a9affcab31b17a8928cb15ab043c09f58a14d6a4",
+      "size": 161
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/wardleyDiagram-EUEZMDUE.mjs": {
+      "sha256": "de62799a367222a7ebb835fd81ff2b7ed35c13a1da3a18b4a7c80eb295ba9b7a",
+      "size": 25906
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/chunks/mermaid.esm.min/xychartDiagram-R6JRNRHN.mjs": {
+      "sha256": "8f68d0f81631c833109d159671118ff83f2886985e81a588f575c46d35ad5317",
+      "size": 40764
+    },
+    "https://cdn.jsdelivr.net/npm/mermaid@11.16.0/dist/mermaid.esm.min.mjs": {
+      "sha256": "b81c2c7ac0d81466022ea895c6701978ccb742e12e423dd8ae4a5a45cc259633",
+      "size": 29775
+    },
+    "https://cdn.jsdelivr.net/npm/nomnoml@1.7.0/dist/nomnoml.js": {
+      "sha256": "601c588fe6a6ce3730d58b7d261c6694424d1d3d3d386a6cafaf6d1c1037f759",
+      "size": 71815
+    },
+    "https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js": {
+      "sha256": "35f4f974f4b2bcd44da73963347f8952e341f83909e4498227d4e26b98f66f0d",
+      "size": 131835
+    },
+    "https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js": {
+      "sha256": "d949f1c3687aedadcedac85261865f29b17cd273997e7f6b2bfc53b2f9d4c4dd",
+      "size": 10751
+    }
+  }
+}

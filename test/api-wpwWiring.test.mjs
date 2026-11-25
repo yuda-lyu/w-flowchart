@@ -10,6 +10,11 @@ import { fileURLToPath } from 'url'
 import { dirname, resolve, join } from 'path'
 import wpw from 'w-playwright'
 import WFlowchart from '../src/WFlowchart.mjs'
+import { cdn, installCdn } from './tools/cdn.mjs'
+
+// 測試不連 CDN(規則帳本規則 3): 本檔之替身疊在 installCdn 之接縫之上, 其 next() 不經下層替身,
+//   故走真路徑之案(makeProbe(true))須自行以 cdn.routeBrowser 包裝 next() 回傳之 browser
+installCdn()
 
 const __dir = dirname(fileURLToPath(import.meta.url))
 const srcDir = resolve(__dir, '..', 'src')
@@ -29,7 +34,9 @@ function makeProbe(next_) {
         launch: async (o, next) => {
             calls.push(o)
             if (next_) {
-                return next()
+                const b = await cdn.routeBrowser(await next())
+                assert.ok(cdn.isRouted(b), '走真路徑之 browser 須已導向本地副本(沒有漏接)')
+                return b
             }
             throw new Error('stub: no real launch')
         },
@@ -49,6 +56,18 @@ function assertGuarded(o) {
 }
 
 describe('啟動接線: 本套件之啟動點皆經 w-playwright(送出之選項含守門)', function() {
+
+    let mark = null
+
+    before(async function() {
+        this.timeout(cdn.hookTimeoutMs) // 走真路徑之案需繪圖庫本地副本; 取得點之時限對齊下載預算
+        await cdn.ensure()
+        mark = cdn.violationMark()
+    })
+
+    after(function() {
+        if (mark) cdn.assertNoViolation(mark) // 本檔期間若有任何外部請求違規即失敗
+    })
 
     it('站點全集: src 內 launchBrowser() 之呼叫站點恰為 10 處, 與接線表一致; 啟動僅在 common/launchBrowser.mjs 經 wpw.launchChromium', function() {
         // 對應「每個啟動點皆須經 w-playwright」: 站點多於表者表示有新增站點未被接線測試涵蓋
