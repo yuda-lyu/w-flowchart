@@ -12,6 +12,7 @@ import { fileURLToPath } from 'url'
 import { dirname, resolve } from 'path'
 import pixelmatch from 'pixelmatch'
 import { PNG } from 'pngjs'
+import wpw from 'w-playwright'
 import { openStage, renderCase, runInvariants, helpers } from './lib.mjs'
 import { cdn } from './tools/cdn.mjs'
 import { CASES } from './cases.mjs'
@@ -47,7 +48,7 @@ describe('p10 渲染回歸(結構不變量 + 快照基準)', function() {
     let mark = null
 
     before(async function() {
-        this.timeout(cdn.hookTimeoutMs + 120000) // 取得點(首次需下載時)之時限對齊下載預算, 再加舞台頁啟動之 120 秒
+        this.timeout(cdn.hookTimeoutMs + wpw.LAUNCH_HOOK_TIMEOUT_MS) // 串行: 先 cdn.ensure()(首次需下載, 時限對齊下載預算)再啟動舞台頁(首次可能安裝瀏覽器, w-playwright 之建議時限), 兩段最壞時間相加
         fs.mkdirSync(SNAP, { recursive: true })
         await cdn.ensure()
         mark = cdn.violationMark()

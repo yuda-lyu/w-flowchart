@@ -3,7 +3,8 @@
 //   A. 清單與產品之 CDN 網址表一致、ESM 相對匯入閉包完整(R-FC-CDN-01)
 //   B. 經本庫之啟動出口(src/common/launchBrowser.mjs 與測試端直接啟動)之 browser 皆已導向本地副本,表外請求使測試失敗(R-FC-CDN-02)
 //   C. Node 端 fetch(p8 之 cdnFetchText)已導向本地副本(R-FC-CDN-03)
-//   D. 涵蓋盤點: 凡會啟動瀏覽器之測試檔皆經 installCdn;疊放之替身其 next() 逐處包裝 cdn.routeBrowser(R-FC-CDN-04)
+//   D. 涵蓋盤點: 凡會啟動瀏覽器之測試檔皆經 installCdn; installCdn 以 w-playwright 之啟動後鉤子 wpw.onBrowserCreated 掛路由(鉤子已掛、啟動出口 isRouted),
+//      鉤子之註冊集中於橋接檔一處, 其餘測試檔不自行註冊、不於 setBrowserTypeForTest 之替身內自包 cdn.routeBrowser(R-FC-CDN-04)
 //   E. src 不含測試接縫(R-FC-CDN-05)
 import assert from 'assert'
 import fs from 'fs'
@@ -95,6 +96,21 @@ describe('CDN 接線: 本庫之啟動出口皆已導向本地副本(R-FC-CDN-02)
         assert.ok(cdn.isRouted(browser), 'wpw.launchChromium() 之 browser 未經 routeBrowser(漏接)')
         const page = await browser.newPage()
         assert.ok(cdn.isRouted(page), 'browser.newPage() 之頁面亦應已導向本地副本')
+        await browser.close()
+        browser = null
+    })
+
+    it('R-FC-CDN-02 使用端自設 setBrowserTypeForTest 之替身且直呼 next() 者, 回傳之 browser 與其頁面亦已導向本地副本(啟動後鉤子與替換正交, 替身內不必自包路由)', async function() {
+        const restore = wpw.setBrowserTypeForTest({ launch: async (o, next) => await next() }) // 替身內不自包 cdn.routeBrowser
+        try {
+            browser = await wpw.launchChromium({ headless: true })
+        }
+        finally {
+            restore()
+        }
+        assert.ok(cdn.isRouted(browser), '替身直呼 next() 之 browser 未經 routeBrowser(啟動後鉤子未掛或未作用)')
+        const page = await browser.newPage()
+        assert.ok(cdn.isRouted(page), '該 browser 之頁面亦應已導向本地副本')
         await browser.close()
         browser = null
     })
@@ -203,13 +219,48 @@ function analyze(files, tests, bridgeFp) {
     return { users, uncovered, noEnsure, noTimeout, noMark, noCheck }
 }
 
-// 使用 setBrowserTypeForTest 之檔: 每一處 next() 呼叫皆須為 cdn.routeBrowser(await next()) (其 next() 不經下層替身, 故疊放者須逐處包裝)
-function unwrappedNextCalls(text) {
-    // 先去註解, 再把字串與樣板字串之內容清空(測試標題內之「next()」字樣不是呼叫)
-    const t = stripComments(text).replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g, '""')
-    const all = (t.match(/\bnext\(/g) || []).length
-    const wrapped = (t.match(/\bcdn\.routeBrowser\(await next\(\)\)/g) || []).length
-    return { all, wrapped }
+// 啟動後鉤子之接線盤點: 橋接檔恰一處 wpw.onBrowserCreated((t) => cdn.routeBrowser(t)) 且不再用 setBrowserTypeForTest;
+//   其餘檔不自行註冊鉤子、不呼叫 routeBrowser(尤其是 setBrowserTypeForTest 之替身內自包 cdn.routeBrowser(await next()))
+// 先去註解, 再把字串與樣板字串之內容清空(測試標題內之字樣不是呼叫); 傳入之 files 不含本檔(本檔含合成檔集與正則字面值, 其引號會使清空錯配)
+const stripCode = (t) => stripComments(t).replace(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g, '""')
+function analyzeHookWiring(files, bridgeFp) {
+    const bridge = stripCode(files.get(bridgeFp) || '')
+    const bridgeHooks = (bridge.match(/\bwpw\.onBrowserCreated\(/g) || []).length
+    const bridgeRoutes = /\bwpw\.onBrowserCreated\(\s*(?:async\s*)?\(?\s*(\w+)\s*\)?\s*=>\s*(?:await\s+)?cdn\.routeBrowser\(\s*\1\s*\)/.test(bridge)
+    const bridgeStubs = (bridge.match(/\bsetBrowserTypeForTest\(/g) || []).length
+    const otherHooks = [] // 橋接檔以外自行註冊鉤子者
+    const otherRoutes = [] // 橋接檔以外呼叫 routeBrowser( 者(含替身內自包)
+    const stubUsers = [] // 橋接檔以外使用 setBrowserTypeForTest 者(供盤點器自證有掃到)
+    for (const [fp, txt] of files) {
+        if (fp === bridgeFp) continue
+        const t = stripCode(txt)
+        if (/\bonBrowserCreated\(/.test(t)) otherHooks.push(path.basename(fp))
+        if (/\brouteBrowser\(/.test(t)) otherRoutes.push(path.basename(fp))
+        if (/\bsetBrowserTypeForTest\(/.test(t)) stubUsers.push(path.basename(fp))
+    }
+    return { bridgeHooks, bridgeRoutes, bridgeStubs, otherHooks, otherRoutes, stubUsers }
+}
+
+// 不啟動瀏覽器之假 browser: 具 routeBrowser 所需介面(newContext、newPage、contexts、close), 供驗「鉤子已掛」而不起 Chrome
+const makeFakeBrowser = () => ({
+    newContext: async () => {
+        throw new Error('fake: no context')
+    },
+    newPage: async () => {
+        throw new Error('fake: no page')
+    },
+    contexts: () => [],
+    close: async () => {},
+})
+// 以 setBrowserTypeForTest 之替身(不呼叫 next)啟動, 回傳 w-playwright 交給呼叫端之物件(已套鉤子者); 替身必還原
+async function launchViaStub(make) {
+    const restore = wpw.setBrowserTypeForTest({ launch: async () => make() })
+    try {
+        return await wpw.launchChromium({ headless: true })
+    }
+    finally {
+        restore()
+    }
 }
 
 describe('CDN 接線: 涵蓋盤點與產品不含接縫(R-FC-CDN-04、R-FC-CDN-05)', function() {
@@ -279,20 +330,103 @@ describe('CDN 接線: 涵蓋盤點與產品不含接縫(R-FC-CDN-04、R-FC-CDN-0
         assert.deepStrictEqual(d.uncovered, [T])
     })
 
-    it('R-FC-CDN-04 使用 setBrowserTypeForTest 之檔(橋接檔與疊放替身之 api-wpwWiring.test)其每一處 next() 呼叫皆為 cdn.routeBrowser(await next())', function() {
+    it('R-FC-CDN-04 鉤子已掛: 啟動後鉤子之註冊集中於橋接檔恰一處(wpw.onBrowserCreated((t) => cdn.routeBrowser(t))), 橋接檔不用 setBrowserTypeForTest, 其餘測試檔不自行註冊鉤子亦不呼叫 routeBrowser(不於替身內自包)', function() {
         const files = readAll(__dir, n => /\.mjs$/.test(n))
-        const used = []
-        for (const [fp, txt] of files) {
-            if (!/\bsetBrowserTypeForTest\(/.test(stripComments(txt))) continue
-            used.push(path.basename(fp))
-            const c = unwrappedNextCalls(txt)
-            assert.ok(c.all >= 1, path.basename(fp) + ' 之 next() 呼叫偵測不到(盤點壞掉)')
-            assert.strictEqual(c.wrapped, c.all, `${path.basename(fp)} 有 ${c.all - c.wrapped} 處 next() 呼叫未包成 cdn.routeBrowser(await next())`)
+        assert.ok(files.delete(path.resolve(__dir, 'unit-cdnWiring.test.mjs')), '應有本檔(自身不掃, 見 stripCode 之說明)')
+        assert.ok(files.has(bridgeFp), '掃描集合應含橋接檔')
+        assert.ok(files.size >= 14, '掃描到之 mjs 檔過少(偵測壞掉): ' + files.size)
+        const r = analyzeHookWiring(files, bridgeFp)
+        assert.strictEqual(r.bridgeHooks, 1, '橋接檔應恰一處 wpw.onBrowserCreated 呼叫(installCdn 未以它掛鉤子或掛了多處)')
+        assert.ok(r.bridgeRoutes, '橋接檔之鉤子應為 (t) => cdn.routeBrowser(t)(對最終回傳之 browser 掛路由)')
+        assert.strictEqual(r.bridgeStubs, 0, '橋接檔不應再以 setBrowserTypeForTest 之替身接線(替換非疊放, 會被其他替身繞過)')
+        assert.deepStrictEqual(r.otherHooks, [], '這些檔自行註冊了 onBrowserCreated 鉤子(鉤子之註冊集中於橋接檔)')
+        assert.deepStrictEqual(r.otherRoutes, [], '這些檔自行呼叫 routeBrowser(鉤子已套在最終回傳者上, 替身內不必自包 cdn.routeBrowser(await next()))')
+        assert.ok(r.stubUsers.includes('api-wpwWiring.test.mjs'), '應掃到 api-wpwWiring.test.mjs 使用 setBrowserTypeForTest(偵測壞掉): ' + r.stubUsers)
+    })
+
+    it('R-FC-CDN-04 鉤子盤點器自檢: 對合成檔集能區分「已掛」「未掛」「鉤子不掛路由」「橋接檔仍用替身」「他檔自註冊/自包」「多處註冊」, 註解與字串中之字樣不算', function() {
+        const P = (s) => path.resolve('/x', s)
+        const B = P('tools/cdn.mjs')
+        const A = P('a.test.mjs')
+        const mk = (obj) => new Map(Object.entries(obj))
+        const GOOD = 'import wpw from \'w-playwright\'\nexport function installCdn() {\n    wpw.onBrowserCreated((t) => cdn.routeBrowser(t))\n}'
+        const STUB = 'wpw.setBrowserTypeForTest({ launch: async (o, next) => await next() })'
+        const ok = analyzeHookWiring(mk({ [B]: GOOD, [A]: STUB }), B)
+        assert.deepStrictEqual(ok, { bridgeHooks: 1, bridgeRoutes: true, bridgeStubs: 0, otherHooks: [], otherRoutes: [], stubUsers: ['a.test.mjs'] }, '已掛且無他檔自接線者不應被列入')
+        const none = analyzeHookWiring(mk({ [B]: 'export function installCdn() {}', [A]: STUB }), B)
+        assert.strictEqual(none.bridgeHooks, 0, '未掛鉤子者應被抓到')
+        const empty = analyzeHookWiring(mk({ [B]: 'wpw.onBrowserCreated((t) => {})', [A]: STUB }), B)
+        assert.deepStrictEqual([empty.bridgeHooks, empty.bridgeRoutes], [1, false], '鉤子不對 target 呼叫 cdn.routeBrowser 者應被抓到')
+        const other = analyzeHookWiring(mk({ [B]: 'wpw.onBrowserCreated((t) => cdn.routeBrowser(t))\nwpw.onBrowserCreated(x)' }), B)
+        assert.strictEqual(other.bridgeHooks, 2, '橋接檔多處註冊者應被抓到')
+        const stubBridge = analyzeHookWiring(mk({ [B]: GOOD + '\n' + STUB }), B)
+        assert.strictEqual(stubBridge.bridgeStubs, 1, '橋接檔仍以 setBrowserTypeForTest 接線者應被抓到')
+        const wrap = analyzeHookWiring(mk({ [B]: GOOD, [A]: 'launch: async (o, next) => await cdn.routeBrowser(await next())' }), B)
+        assert.deepStrictEqual(wrap.otherRoutes, ['a.test.mjs'], '替身內自包 cdn.routeBrowser(await next()) 者應被抓到')
+        const own = analyzeHookWiring(mk({ [B]: GOOD, [A]: 'const r = wpw.onBrowserCreated((t) => x(t))' }), B)
+        assert.deepStrictEqual(own.otherHooks, ['a.test.mjs'], '他檔自行註冊鉤子者應被抓到')
+        const quiet = analyzeHookWiring(mk({ [B]: GOOD, [A]: '// wpw.onBrowserCreated(x) cdn.routeBrowser(await next())\nconst s = "cdn.routeBrowser(await next())"\nit(\'wpw.onBrowserCreated(\')' }), B)
+        assert.deepStrictEqual([quiet.otherHooks, quiet.otherRoutes], [[], []], '註解與字串中之字樣不算')
+    })
+
+    it('R-FC-CDN-04 鉤子已掛(不起 Chrome): 替身(不呼叫 next, 回傳具 routeBrowser 介面之假 browser)啟動之結果亦已 isRouted', async function() {
+        const fake = makeFakeBrowser()
+        const b = await launchViaStub(() => fake)
+        assert.strictEqual(b, fake, 'w-playwright 應原樣回傳替身之物件(鉤子就地對它動作)')
+        assert.ok(cdn.isRouted(b), '經 w-playwright 啟動之 browser 未經 routeBrowser(installCdn 未掛啟動後鉤子)')
+    })
+
+    it('R-FC-CDN-04 鉤子之失敗語意: 替身回傳非 Playwright 物件(假物件缺 routeBrowser 所需介面)者啟動 reject E_LAUNCH_HOOK(以假物件驗接線之測試須先還原鉤子)', async function() {
+        await assert.rejects(() => launchViaStub(() => ({})), err => err && err.code === 'E_LAUNCH_HOOK', '鉤子已掛時, 假物件應使啟動 reject E_LAUNCH_HOOK')
+    })
+
+    it('R-FC-CDN-04 installCdn() 回傳還原函數且只裝一次: 還原後啟動之 browser 不再掛路由、全域 fetch 還原; 再呼叫 installCdn() 重新掛上', async function() {
+        const restore = installCdn()
+        assert.strictEqual(typeof restore, 'function', 'installCdn() 應回傳還原函數')
+        assert.strictEqual(installCdn(), restore, '已裝好時重複呼叫應回傳同一還原函數(只裝一次)')
+        const patchedFetch = globalThis.fetch
+        let restoredFetch = null
+        restore()
+        try {
+            restoredFetch = globalThis.fetch
+            assert.notStrictEqual(restoredFetch, patchedFetch, '還原後全域 fetch 應不再是補丁版')
+            const plain = {}
+            const b = await launchViaStub(() => plain) // 鉤子已還原: 假物件不再使啟動 reject
+            assert.strictEqual(b, plain)
+            assert.ok(!cdn.isRouted(b), '還原後啟動之物件不應被掛路由')
         }
-        assert.ok(used.includes('cdn.mjs') && used.includes('api-wpwWiring.test.mjs'), '應至少有橋接檔與 api-wpwWiring.test.mjs: ' + used)
-        // 盤點器自檢: 逐處檢查, 不是整檔只要出現過一次包裝就過
-        assert.deepStrictEqual(unwrappedNextCalls('return cdn.routeBrowser(await next())\nreturn next()'), { all: 2, wrapped: 1 })
-        assert.deepStrictEqual(unwrappedNextCalls('// next() 之說明\nreturn cdn.routeBrowser(await next())'), { all: 1, wrapped: 1 })
+        finally {
+            installCdn() // 無論成敗皆重新掛上(其後各案依賴之)
+        }
+        assert.notStrictEqual(globalThis.fetch, restoredFetch, '重新安裝後全域 fetch 應為補丁版')
+        const fake = makeFakeBrowser()
+        assert.ok(cdn.isRouted(await launchViaStub(() => fake)), '重新安裝後啟動之 browser 應已掛路由')
+    })
+
+    it('R-FC-CDN-04 installCdn() 之回滾與身分守衛: patchFetch 失敗時撤回已掛之鉤子並原樣拋錯(重試可成功); 舊還原函數於重裝後呼叫不影響新安裝', async function() {
+        const restore0 = installCdn()
+        restore0() // 先還原, 使下一次 installCdn() 真的重裝
+        const realPatch = cdn.patchFetch
+        try {
+            cdn.patchFetch = () => {
+                throw new Error('fake: patchFetch failed')
+            }
+            assert.throws(() => installCdn(), /fake: patchFetch failed/, 'patchFetch 失敗應原樣往外拋(不靜默略過)')
+            const plain = {}
+            const b = await launchViaStub(() => plain) // 回滾後鉤子已撤回: 假物件不使啟動 reject
+            assert.strictEqual(b, plain)
+            assert.ok(!cdn.isRouted(b), '安裝失敗後不應殘留已掛之鉤子')
+            cdn.patchFetch = realPatch
+            const restore1 = installCdn() // 旗標未設, 重試成功
+            assert.notStrictEqual(restore1, restore0, '重裝應得新的還原函數')
+            restore0() // 舊還原函數於重裝後呼叫: 不得使旗標歸零或撤掉新安裝
+            assert.strictEqual(installCdn(), restore1, '舊還原函數不得使旗標歸零(否則下次 installCdn() 會重複掛一份鉤子)')
+            assert.ok(cdn.isRouted(await launchViaStub(() => makeFakeBrowser())), '舊還原函數不得撤掉新安裝之鉤子')
+        }
+        finally {
+            cdn.patchFetch = realPatch
+            installCdn() // 無論成敗皆確保已安裝(其後各案依賴之)
+        }
     })
 
     it('R-FC-CDN-05 src 不含測試接縫(產品之預設行為不變): src 內無 createCdnLocal、w-package-tools-e2e、cdn.manifest、W_CDN、setBrowserTypeForTest、installCdn 字樣', function() {

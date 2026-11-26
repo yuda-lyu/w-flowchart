@@ -2,12 +2,22 @@
 
 本檔為執行工作時特有之累積經驗,留給後續之嘗試、執行與判斷,由agent自行編列、擴充與維護.過長時抽出舊者為`experience_<年月日>.md`,並於本檔註明何時抽出.
 
-## 2026-11-25 測試不連 CDN 改用共用函式 `createCdnLocal`(排程第 632 項續)
+## 2026-11-26 CDN 路由改用 w-playwright 啟動後鉤子(排程第 651 項;只改測試端)
+
+- **結果**:`installCdn()` 以 `wpw.onBrowserCreated((t) => cdn.routeBrowser(t))` 取代「`setBrowserTypeForTest` 替身內自包 `cdn.routeBrowser(await next())`」,回傳還原函數;`unit-cdnWiring` 12 → 18 案;全套 385 → 391 passing,標準圖 0 張改變,`src` 0 行.規則見規則帳本規則 3(R-FC-CDN-02、04).
+- **鉤子語意要點(實測)**:①鉤子套在**替身回傳之後**的最終物件,替身內 `next()` 之內層結果當下**尚未**掛路由,故 `isRouted` 不能在替身內斷言,要在啟動完成後斷言(`api-wpwWiring` 真路徑案改為替身記錄 `next()` 之 browser,啟動後再斷言並加 `served.browser` 增量);②替身回傳假物件則鉤子之 `routeBrowser` 拋 `E_CDN_ARG`、啟動 reject `E_LAUNCH_HOOK`;不起 Chrome 驗鉤子時之假 browser 最小介面為 `newContext`／`newPage`／`contexts()`／`close`;③`routeBrowser` 對同一 browser 冪等,故「替身內仍自包」之殘留在行為案上看不出,只有靜態盤點抓得到(變異⑦),所以靜態盤點不可省;④`installCdn()` 之還原函數以閉包身分檢查(`restoreAll !== restore` 即不動作),避免舊還原函數於重裝後重設旗標(舊函數撤不掉新鉤子,但會使 `installed` 歸零,下次 `installCdn()` 即重複掛一份鉤子);`patchFetch` 失敗時須撤回已掛之鉤子,否則重試疊兩份.
+- **靜態盤點器**:先去註解再把字串／樣板字串內容清空後掃;**本檔自身不掃**(含合成檔集與正則字面值,其引號會使清空錯配,掃自身會誤判或漏判).
+- **變異／修前紅之疏漏(如實記)**:兩次讓未路由之 browser 直連真來源——①修前紅跑(舊橋接檔 + 新測試)之 `api-wpwWiring` 真路徑案,p10 頁面載入時連 jsDelivr;②變異「不掛鉤子」之 `--grep` 排除字串寫成「表外」,漏掉標題為「對照表以外之外部網址」之案,該案之頁面 `fetch` 連到真來源.教訓:變異與修前紅階段,凡會導覽頁面之案,不能只靠 `--grep` 排除,應於替身 `next({ ...o, proxy: { server: 'http://127.0.0.1:9' } })` 使外網不可達(正確接線下本地路由不受影響,真路徑案仍綠;不掛鉤子則頁面載不到庫而轉紅,不接觸真來源).
+- **斷網驗收預載檔之寫法**(一次性,不入庫):`NODE_OPTIONS=--import=./tmp/<夾>/<預載>.mjs` 掛於 mocha 主行程與各 worker;預載檔內 `import wpw from 'w-playwright'` 後把 `wpw.launchChromium` 換成「加 `--host-resolver-rules=MAP * ~NOTFOUND` 再呼叫原函數」之包裝並記錄啟動次數(`wpw` 非凍結物件,可改屬性;各站點皆呼叫 `wpw.launchChromium` 故涵蓋),全域 `fetch` 對非回送位址之 http(s) 拒絕並記錄;w-playwright 仍把守門之 `--disable-features` 置於 `args` 最後,`api-wpwWiring` 之守門斷言於該配置照綠.計數應含「啟動次數 > 0」作為預載確實生效之正對照.
+- **`p10.test.mjs` 之 `before` 時限**:同一 `before` 串行 `cdn.ensure()` 後啟動舞台頁,兩段最壞時間相加(`cdn.hookTimeoutMs` 2130000 + `wpw.LAUNCH_HOOK_TIMEOUT_MS` 1150000 = 3280000 毫秒,低於 mocha 上限 2147483647);只含 `cdn.ensure()` 之 `before` 不變.
+- **機器忙碌**:本輪每次跑測試前 CPU 皆 ≤ 50%,未逾 70%,無須等待.
+
+## 2026-11-25 測試不連 CDN 改用共用函式 `createCdnLocal`(排程第 632 項續;接線方式已由上段改為啟動後鉤子)
 
 - **結果**:移除自寫原型(約 450 行取得／鎖／路由／補丁 + 29 案),改用 w-package-tools-e2e `^1.0.51` 之 `createCdnLocal`;本庫只留橋接檔 `test/tools/cdn.mjs`、`cdn.roots.mjs`、清單 `cdn.manifest.json` 與 12 案接線測試 `unit-cdnWiring.test.mjs`;全套 373 → 385 passing,標準圖 0 張改變,`src` 0 行.規則見規則帳本規則 3(R-FC-CDN-01~05).
 - **遷移要點**:①清單格式相容——以共用庫 CLI 重產之清單與原型清單 126 檔 sha256／大小逐一相同,`--check` 一致,下載日誌 125 列(同內容之兩網址只取一次);②`routeBrowser` 為 async,於 `setBrowserTypeForTest` 之 `launch` 替身內 `await cdn.routeBrowser(await next())`,疊放之替身(`api-wpwWiring.test.mjs`)其 `next()` 不經下層替身,逐處自行包裝並斷言 `cdn.isRouted`;③共用庫預設放行回送位址(原型一律視為外部),本庫頁面皆 `setContent`、不連本機服務,故於橋接檔設 `allowLoopback: false` 維持「預設拒絕」,並以案例斷言回送位址之 `fetch` 亦拋 `E_CDN_EXTERNAL`;④橋接檔與 `cdn` 實例為模組層單例,mocha worker 重用於多檔時共用之,故各檔以 `violationMark()`／`assertNoViolation(mark)` 界定本檔之違規(同 worker 之 `unit-cdnWiring` 刻意製造違規不影響他檔);⑤`installed` 旗標須在兩步(接縫、`patchFetch`)皆成功後才設,否則拋錯後同 worker 之後續檔 `installCdn()` 變成空操作而靜默連真 CDN(複審指出).
 - **不能憑內容比對證明「取自本地」**:版本釘死,`cdnFetchText` 取得內容之 sha256 與清單相同,不論取自本地副本或真 CDN 皆成立;以 `cdn.stats().served.fetch` 之增量(補丁供應次數)才有鑑別力.頁面端同理用 `served.browser`.
-- **涵蓋盤點之強化**(複審):除「呼叫 `installCdn()`」外,另須有 `cdn.ensure()`、`this.timeout(cdn.hookTimeoutMs…)`、`cdn.violationMark()`、`cdn.assertNoViolation(`(剔除註解),且 `launchChromiumPersistent(` 亦視為啟動;使用 `setBrowserTypeForTest` 之檔每一處 `next()` 皆須為 `cdn.routeBrowser(await next())`.
+- **涵蓋盤點之強化**(複審):除「呼叫 `installCdn()`」外,另須有 `cdn.ensure()`、`this.timeout(cdn.hookTimeoutMs…)`、`cdn.violationMark()`、`cdn.assertNoViolation(`(剔除註解),且 `launchChromiumPersistent(` 亦視為啟動;使用 `setBrowserTypeForTest` 之檔每一處 `next()` 皆須為 `cdn.routeBrowser(await next())`(2026-11-26 起已由啟動後鉤子取代,守門改為「鉤子已掛、不自包」,見上段).
 - **變異腳本**:鏡像根;錨點隨改碼失效時腳本報「錨點出現 0 次」(不靜默略過),更新錨點後重跑;19 項接線變異全轉紅.共用庫本身之機制(鎖、取得、路由)不在本庫重複變異,各舊案之涵蓋對照以案號逐一 Grep 核對(規則 3).
 - **機器忙碌**:本機同時有他套件之 agent 跑測試,每次全套前 CPU 常逾 70%,依規定等待至 ≤70%(單輪 10~25 分);鏈腳本內建檢查與等待,不要手動插入其他測試.
 - **`npm i -D` 副作用**:`package-lock.json` 頂層 `version` 同步為 `package.json` 之 1.0.63(原 1.0.62,非改版);共用庫依賴 wsemi `^1.9.75`,lock 內 wsemi 由 1.9.74 升為 1.9.75,`package.json` 之 `wsemi ^1.9.74` 不變.

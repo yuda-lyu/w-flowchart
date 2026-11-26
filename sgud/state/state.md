@@ -2,7 +2,14 @@
 
 本檔記當前已開發功能之最新狀態:各功能做到哪裡、對應之規則帳本條目與測試檔、已知缺口與待辦、最近一次驗證或發布之版本.只記現況,不寫過程(過程寫入`sgud/exp/experience.md`).規則帳本為藍圖(`sgud/rule/rulebook.md`),兩者比對即知尚未做到者.
 
-## 最近一次驗證(2026-11-25,排程第 632 項續:測試不連 CDN 改用共用函式)
+## 最近一次驗證(2026-11-26,排程第 651 項:測試之 CDN 路由改用 w-playwright 啟動後鉤子)
+
+- 套件版號 1.0.67(本輪未改版、未發布、未提交;`src/`、`package.json`、`script.txt`、`dist/`、標準圖皆 0 改動;只改測試端 4 檔:`test/tools/cdn.mjs`、`test/unit-cdnWiring.test.mjs`、`test/api-wpwWiring.test.mjs`、`test/p10.test.mjs`;相依為 w-playwright 1.0.6、w-package-tools-e2e 1.0.55).
+- `installCdn()` 改以 `wpw.onBrowserCreated((t) => cdn.routeBrowser(t))` 掛路由(鉤子之註冊集中於橋接檔一處),回傳還原函數;刪除 `setBrowserTypeForTest` 替身內自包 `cdn.routeBrowser(await next())` 之接線(橋接檔與 `api-wpwWiring.test.mjs`)與其「每處 `next()` 皆包裝」之靜態守門;改為「鉤子已掛、啟動出口 `cdn.isRouted(browser)`」守門(規則帳本 R-FC-CDN-04,8 案;R-FC-CDN-02 增 1 案).`p10.test.mjs` 之 `before` 時限改 `cdn.hookTimeoutMs + wpw.LAUNCH_HOOK_TIMEOUT_MS`(串行相加).
+- 全套 `npm test`:**391 passing、0 failing、0 pending**(約 3 分;385 舊案 + 6 新案:`unit-cdnWiring.test.mjs` 12 → 18 案);`npm pack` 發布包解開之目錄配置(複製 `test/` 含 `_cache` 與 `node_modules` 之非連結副本)391 passing;斷網情境(`W_CDN_OFFLINE=1`、全域 `fetch` 對非回送位址拒絕、Chromium 加 `--host-resolver-rules=MAP * ~NOTFOUND`)391 passing,啟動 299 次、被阻擋之 `fetch` 0 筆.受影響三檔(`unit-cdnWiring`、`api-wpwWiring`、`p10`)連跑 5 次皆 82 passing.標準圖 0 張改變.變異驗證見規則帳本規則 3.
+- eslint:四檔無新增(`p10.test.mjs` 既有 5 項同改前).
+
+## 前次驗證(2026-11-25,排程第 632 項續:測試不連 CDN 改用共用函式;已被上段更新接線方式與案數)
 
 - 套件版號 1.0.63(本輪未改版、未發布、未提交;`src/`、`script.txt`、`dist/` 皆 0 改動;`package.json` 只加 `devDependencies.w-package-tools-e2e ^1.0.51`,`package-lock.json` 隨之更新,wsemi 1.9.74 → 1.9.75 為該套件所依).
 - 「測試不連 CDN」改由自有套件 **w-package-tools-e2e 之 `createCdnLocal`**(README §2.13)提供,本庫移除自寫之原型(`test/tools/cdnLocal.mjs`、`genCdnManifest.mjs`、`cdnAcquireChild.mjs`、`cdnLocal.manifest.json`、`test/unit-cdnLocal.test.mjs` 29 案);保留本庫專屬之接線:橋接檔 `test/tools/cdn.mjs`、`test/tools/cdn.roots.mjs`(根網址＝`src/common/cdn.mjs` 之 `PKG` 表)、清單 `test/tools/cdn.manifest.json`(共用庫 CLI 產生,內容與原型之清單 126 檔逐一相同)、`test/unit-cdnWiring.test.mjs`(12 案);`snapshot.mjs`、`lib.mjs`、`p10.test.mjs`、`wflowchart.test.mjs`、`api-wpwWiring.test.mjs` 改接 `cdn`.規則見規則帳本規則 3(R-FC-CDN-01~05).
@@ -41,7 +48,7 @@
 | 影像比對度量(pixelmatch 8) | 已套用於兩處呼叫點,守門為上列兩測試之比對本身 | 規則 1 | 同上 |
 | 渲染瀏覽器(w-playwright ^1.0.1 → playwright-core 1.64.1) | p1~p10 標準圖綁定 Chromium 156 headless shell;換版處置程序見規則 1(換版即升 w-playwright) | 規則 1 | 同上 |
 | 瀏覽器啟動經 w-playwright(單一啟動點 `src/common/launchBrowser.mjs`,10 站點) | 已完成;接線測試 20 案＋盤點 4 案;逐站點變異 11 次皆轉紅;`src/test/toolg` 直接匯入 playwright 0 處 | 規則 2(R-FC-WPW-01~04) | `test/api-wpwWiring.test.mjs`、`test/unit-wpwOnly.test.mjs` |
-| 測試不連 CDN(共用函式 `createCdnLocal` 之接線:路由、Node 端 fetch 補丁、清單、離線) | 已完成;接線測試 12 案;19 項接線變異全轉紅;斷網情境、冷快取、發布包配置全套皆綠 | 規則 3(R-FC-CDN-01~05) | `test/unit-cdnWiring.test.mjs`(橋接檔 `test/tools/cdn.mjs`);各 pN 測試經 `snapshot.mjs`／`lib.mjs` 接線 |
+| 測試不連 CDN(共用函式 `createCdnLocal` 之接線:啟動後鉤子路由、Node 端 fetch 補丁、清單、離線) | 已完成;接線測試 18 案;鉤子接線 10 類變異全轉紅;斷網情境、冷快取、發布包配置全套皆綠 | 規則 3(R-FC-CDN-01~05) | `test/unit-cdnWiring.test.mjs`(橋接檔 `test/tools/cdn.mjs`);各 pN 測試經 `snapshot.mjs`／`lib.mjs` 接線 |
 
 ## 已知缺口與待辦
 

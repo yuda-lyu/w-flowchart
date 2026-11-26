@@ -12,8 +12,9 @@ import wpw from 'w-playwright'
 import WFlowchart from '../src/WFlowchart.mjs'
 import { cdn, installCdn } from './tools/cdn.mjs'
 
-// 測試不連 CDN(規則帳本規則 3): 本檔之替身疊在 installCdn 之接縫之上, 其 next() 不經下層替身,
-//   故走真路徑之案(makeProbe(true))須自行以 cdn.routeBrowser 包裝 next() 回傳之 browser
+// 測試不連 CDN(規則帳本規則 3): installCdn 於橋接檔以 w-playwright 之啟動後鉤子(onBrowserCreated)掛路由, 鉤子套在「最終回傳給呼叫端之 browser」上,
+//   與本檔之 setBrowserTypeForTest 替身(替換)正交——替身內 next() 之結果直接回傳即可, 不自包 cdn.routeBrowser;
+//   本檔之替身只拋錯或回傳真 browser(next() 之結果), 不回傳假物件(假物件使鉤子之 routeBrowser 拋錯、啟動 reject E_LAUNCH_HOOK)
 installCdn()
 
 const __dir = dirname(fileURLToPath(import.meta.url))
@@ -30,18 +31,19 @@ const COMBOS = [
 
 function makeProbe(next_) {
     const calls = []
+    const launched = [] // 走真路徑時 next() 回傳之 browser(鉤子於替身回傳後才對其套用, 故啟動後才可斷言 isRouted)
     const fake = {
         launch: async (o, next) => {
             calls.push(o)
             if (next_) {
-                const b = await cdn.routeBrowser(await next())
-                assert.ok(cdn.isRouted(b), '走真路徑之 browser 須已導向本地副本(沒有漏接)')
+                const b = await next()
+                launched.push(b)
                 return b
             }
             throw new Error('stub: no real launch')
         },
     }
-    return { calls, fake }
+    return { calls, launched, fake }
 }
 
 // 對應「送出之選項含守門」: 恰一串 --disable-features、置於 args 之末、含守門功能、Playwright 預設那一串被去掉、無頭
@@ -105,7 +107,8 @@ describe('啟動接線: 本套件之啟動點皆經 w-playwright(送出之選項
     }
 
     it('接縫不用替身: next() 走真路徑, 真啟動 headless shell 產出合法 PNG, 其選項含守門', async function() {
-        const { calls, fake } = makeProbe(true)
+        const { calls, launched, fake } = makeProbe(true)
+        const n0 = cdn.stats().served.browser
         const restore = wpw.setBrowserTypeForTest(fake)
         let buf
         try {
@@ -117,6 +120,10 @@ describe('啟動接線: 本套件之啟動點皆經 w-playwright(送出之選項
         assert.ok(Buffer.isBuffer(buf) && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47, '非合法 PNG Buffer')
         assert.strictEqual(calls.length, 1)
         assertGuarded(calls[0])
+        // 替身直呼 next() 而不自包路由: 啟動後鉤子已對最終回傳之 browser 掛路由(沒有漏接), 繪圖庫由本地副本供應
+        assert.strictEqual(launched.length, 1, '替身之 next() 應恰回傳一個 browser')
+        assert.ok(cdn.isRouted(launched[0]), '走真路徑之 browser 須已導向本地副本(沒有漏接; 啟動後鉤子未掛或未作用)')
+        assert.ok(cdn.stats().served.browser > n0, '頁面載入之庫應由本地副本回應(served.browser 增加)')
     })
 
     it('受管瀏覽器缺檔時 reject 帶 code E_BROWSER_MISSING 之 Error(行為變更: 訊息改為 w-playwright 之固定詞彙)', async function() {
